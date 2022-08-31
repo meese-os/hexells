@@ -1,0 +1,32 @@
+{
+  "name": "hexells",
+  "version": "1.0.0",
+  "description": "Create a canvas of a Self-Organising System of cells.",
+  "main": "hexells.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "browserify hexells.js -o browserify/bundle.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/meeseOS/hexells.git"
+  },
+  "keywords": [
+    "canvas",
+    "cells",
+    "wallpaper"
+  ],
+  "author": "Alexander Mordvintsev",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/meeseOS/hexells/issues"
+  },
+  "homepage": "https://github.com/meeseOS/hexells#readme",
+  "devDependencies": {
+    "browserify": "^17.0.0"
+  },
+  "dependencies": {
+    "twgl.js": "^4.24.0",
+    "upng-js": "^2.1.0"
+  }
+}

@@ -1,0 +1,20 @@
+<head>
+	<script src="./browserify/bundle.js"></script>
+	<style>
+		body {
+			margin: 0;
+		}
+	</style>
+</head>
+
+<body></body>
+
+<script>
+	const canvas = document.createElement("canvas");
+	canvas.width = window.innerWidth;
+	canvas.height = window.innerHeight;
+
+	// `Hexells` is in the window scope
+	new Hexells(canvas);
+	document.body.appendChild(canvas);
+</script>

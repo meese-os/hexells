@@ -9,11 +9,12 @@
 <script type="module" src="ca.js"></script>
 
 <style>
-html, body {
-	margin: 0px;
-	font-family: "Google Sans", Arial, Helvetica, sans-serif;
-	color: #FFF;
+	html, body {
+		margin: 0px;
+		font-family: "Google Sans", Arial, Helvetica, sans-serif;
+		color: #FFF;
 	}
+
 	canvas {
 		width: 100vw;
 		height: 100vh;
@@ -59,24 +60,11 @@ html, body {
 	#ui {
 		display: none;
 	}
-
-	#status {
-		pointer-events: none;
-		position: absolute;
-		top: 0px;
-		width: 100%;
-		text-align: center;
-		background-color: rgba(0, 0, 0, 0.75);
-		transition: opacity 0.5s;
-		opacity: 0;
-	}
 </style>
 
 <canvas id="glCanvas"></canvas>
 
 <div id="ui">
-
-<div id="status" class="">sdfsladf;lk</div>
 	<div id="hint" class="centered hint">⇦ Swipe ⇨</div>
 
 	<div id="info" class="centered">
@@ -123,8 +111,8 @@ if (requestFullscreen === undefined) {
 	$("#fsButton").style.display = "none";
 }
 
-$("#fsButton").onclick = ()=>{
-	requestFullscreen.call(frame, {navigationUI: "hide" });
+$("#fsButton").onclick = () => {
+	requestFullscreen.call(frame, { navigationUI: "hide" });
 };
 
 document.addEventListener("fullscreenchange", (event) => {

@@ -1,29 +1,19 @@
 /*
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-/*
-Usage:
-  const ca = new CA(gl, models_json, [W, H]);
-  ca.step();
-
-  ca.paint(x, y, radius, modelIndex);
-  ca.clearCircle(x, y, radius;
-
-  const stats = ca.benchmark();
-  ca.draw();
-  ca.draw(zoom);
-*/
+const twgl = require("twgl.js");
+const UPNG = require("upng-js");
 
 const vs_code = `
 	attribute vec4 position;
@@ -32,7 +22,7 @@ const vs_code = `
 		uv = position.xy*0.5 + 0.5;
 		gl_Position = position;
 	}
-`
+`;
 
 function defInput(name) {
 	return `
@@ -42,7 +32,7 @@ function defInput(name) {
 		vec4 ${name}_read(vec2 pos, float ch) {return _read(${name}, ${name}_tex, pos, ch);}
 		vec4 ${name}_read01(vec2 pos, float ch) {return _read01(${name}, ${name}_tex, pos, ch);}
 		vec4 ${name}_readUV(vec2 uv) {return _readUV(${name}, ${name}_tex, uv);}
-	`
+	`;
 }
 
 const PREFIX = `
@@ -468,10 +458,9 @@ const PROGRAMS = {
 			gl_FragColor = vec4(rgb, 1.0);
 		}
 	}`
-}
+};
 
-function createPrograms(gl, defines) {
-	defines = defines || "";
+function createPrograms(gl, defines = "") {
 	const res = {};
 	for (const name in PROGRAMS) {
 		const fs_code = defines + PREFIX + PROGRAMS[name];
@@ -515,6 +504,7 @@ function decodeBase64(b64) {
 	for (let i = 0; i < bin.length; i++) {
 		bytes[i] = bin.charCodeAt(i);
 	}
+
 	return bytes;
 }
 
@@ -530,10 +520,10 @@ function createDenseInfo(gl, params, onready) {
 	const data = new Uint8Array(UPNG.toRGBA8(img)[0]);
 	info.tex = twgl.createTexture(gl, {
 		width: img.width, height: img.height,
-		minMag: gl.NEAREST, src: data,//, flipY: false, premultiplyAlpha: false,
+		minMag: gl.NEAREST, src: data, // flipY: false, premultiplyAlpha: false,
 	}, ()=>{
-		//info.ready = true;
-		//onready();
+		// info.ready = true;
+		// onready();
 	});
 
 	setTimeout(()=>{
@@ -544,9 +534,28 @@ function createDenseInfo(gl, params, onready) {
 	return info;
 }
 
-export class CA {
+/**
+ * Usage:
+ * ```
+ * const ca = new CA(gl, models, [W, H]);
+ * ca.step();
+ *
+ * ca.paint(x, y, radius, modelIndex);
+ * ca.clearCircle(x, y, radius;
+ *
+ * const stats = ca.benchmark();
+ * ca.draw();
+ * ca.draw(zoom);
+ * ```
+ *
+ * @param {WebGLRenderingContext} gl
+ * @param {Object} models
+ * @param {Array} gridSize [W, H]
+ * @param {Function} [onready=()=>{}]
+*/
+class CA {
 	constructor(gl, models, gridSize, onready) {
-		this.onready = onready || (()=>{});
+		this.onready = onready || (() => {});
 		this.gl = gl;
 		this.gridSize = gridSize || [96, 96];
 		gl.getExtension("OES_standard_derivatives");
@@ -593,7 +602,6 @@ export class CA {
 			u_pos: [x, y], u_r: r, u_viewSize: viewSize,
 		});
 	}
-
 
 	setupBuffers() {
 		const gl = this.gl;
@@ -714,7 +722,7 @@ export class CA {
 		const total = (Date.now() - start) / stepN;
 
 		const ops = ["align", "perception"];
-		for (let i=0; i<this.layers.length; ++i)
+		for (let i = 0; i < this.layers.length; ++i)
 			ops.push(`layer${i}`);
 
 		ops.push("newState");
@@ -753,7 +761,7 @@ export class CA {
 			u_pos: [x, y], u_viewSize: viewSize, u_input: this.buf.state
 		});
 
-		const {width, height} = this.buf.sonic.fbi;
+		const { width, height } = this.buf.sonic.fbi;
 		const gl = this.gl;
 		twgl.bindFramebufferInfo(gl, this.buf.sonic.fbi);
 		gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, this.sonicBuf);
@@ -770,18 +778,17 @@ export class CA {
 
 	setWeights(models) {
 		const gl = this.gl;
-		this.layers.forEach(layer => gl.deleteTexture(layer));
-		const onready = ()=>{
-			if (this.layers.every(l => l.ready))
+		this.layers.forEach((layer) => gl.deleteTexture(layer));
+		const onready = () => {
+			if (this.layers.every((l) => l.ready))
 				this.onready();
 		}
 
-		this.layers = models.layers.map(layer=>createDenseInfo(gl, layer, onready));
+		this.layers = models.layers.map((layer) => createDenseInfo(gl, layer, onready));
 	}
 
-	runLayer(program, output, inputs) {
+	runLayer(program, output, inputs = {}) {
 		const gl = this.gl;
-		inputs = inputs || {};
 		const uniforms = {};
 		for (const name in inputs) {
 			const val = inputs[name];
@@ -791,6 +798,7 @@ export class CA {
 				uniforms[name] = val;
 			}
 		}
+
 		uniforms["u_shuffleTex"] = this.shuffleTex;
 		uniforms["u_shuffleOfs"] = this.shuffleOfs;
 		setTensorUniforms(uniforms, "u_output", output);
@@ -839,3 +847,5 @@ export class CA {
 		twgl.drawBufferInfo(gl, this.quad);
 	}
 }
+
+module.exports = CA;
