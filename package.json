@@ -1,6 +1,6 @@
 {
   "name": "hexells",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Create a canvas of a Self-Organising System of cells.",
   "main": "hexells.js",
   "scripts": {
@@ -12,6 +12,8 @@
     "url": "https://github.com/meeseOS/hexells.git"
   },
   "keywords": [
+    "animation",
+    "background",
     "canvas",
     "cells",
     "wallpaper"

@@ -855,19 +855,32 @@ module.exports = CA;
 const CA = require("./ca.js");
 const twgl = require("twgl.js");
 
+/**
+ * Used to customize the behavior and appearance of Hexells.
+ * @typedef {Object} HexellsOptions
+ * @property {Number} brushRadius
+ * @property {Number} stepPerFrame
+ * @property {Number} timePerModel
+ */
+
 class Hexells {
-  constructor(canvas, isScreenMode) {
+	/**
+	 * Creates a Hexells instance.
+	 * @param {HTMLCanvasElement} canvas
+	 * @param {HexellsOptions} options
+	 */
+  constructor(canvas, options = {}) {
     this.canvas = canvas;
+		this.options = options;
     this.gl = canvas.getContext("webgl", {
       alpha: false,
       desynchronized: true,
       powerPreference: "high-performance"
     });
 
-    this.brushRadius = 16;
-    this.stepPerFrame = 1;
-		// IDEA: Replace with `window.self !== window.top`
-    this.isScreenMode = isScreenMode;
+    this.brushRadius = options.brushRadius ?? 16;
+    this.stepPerFrame = options.stepPerFrame ?? 1;
+		this.timePerModel = options.timePerModel ?? 20 * 1000;
 
 		const models = require("./models.json");
 		this.ca = new CA(this.gl, models, [160, 160], () =>
@@ -886,7 +899,7 @@ class Hexells {
 
     this.guesture = null;
 
-    setInterval(() => this.switchModel(1), 20 * 1000);
+    setInterval(() => this.switchModel(1), this.timePerModel);
 
     requestAnimationFrame(() => this.render());
   }

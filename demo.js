@@ -11,16 +11,16 @@ export class Demo {
 		this.stepPerFrame = 1;
 
 		this.isScreenMode = isScreenMode;
-		this.serverUrl = 'wss://hexells.glitch.me/';
+		this.serverUrl = "wss://hexells.glitch.me/";
 		this.ws = null;
 		this.controlWS = null;
 
 		const gui = this.gui = new dat.GUI();
 		gui.hide();
-		gui.add(this, 'brushRadius', 1, 40);
-		gui.add(this, 'stepPerFrame', 0, 6, 1);
+		gui.add(this, "brushRadius", 1, 40);
+		gui.add(this, "stepPerFrame", 0, 6, 1);
 
-		fetch('models.json').then(r => r.json()).then(models => {
+		fetch("models.json").then(r => r.json()).then(models => {
 			this.ca = new CA(this.gl, models, [160, 160], gui, ()=>this.setup(models));
 		})
 	}
@@ -73,9 +73,9 @@ export class Demo {
 		canvas.addEventListener("touchmove", touchEvent(xy => this.touch(xy)));
 		canvas.addEventListener("touchend", xy => this.endGestue(xy));
 
-		document.addEventListener('keypress', e=>{
-			if (e.key == 'a') this.switchModel(1);
-			if (e.key == 'z') this.switchModel(-1);
+		document.addEventListener("keypress", e=>{
+			if (e.key == "a") this.switchModel(1);
+			if (e.key == "z") this.switchModel(-1);
 		});
 
 		this.connect();
@@ -85,19 +85,19 @@ export class Demo {
 
 	connect() {
 		this.ws = new WebSocket(this.serverUrl);
-		this.ws.addEventListener('open', ()=>{
-			console.log('connected to', this.serverUrl);
+		this.ws.addEventListener("open", ()=>{
+			console.log("connected to", this.serverUrl);
 		});
 		const tryReconnect = e=>{
 			if (!this.ws)
 			  return; // reconnect is already pending
-			console.log('Socket closed');
+			console.log("Socket closed");
 			this.ws = null;
 			setTimeout(()=>this.connect(), 3000);
 		};
-		this.ws.addEventListener('close', tryReconnect);
-		this.ws.addEventListener('error', tryReconnect);
-		this.ws.addEventListener('message', e=>{
+		this.ws.addEventListener("close", tryReconnect);
+		this.ws.addEventListener("error", tryReconnect);
+		this.ws.addEventListener("message", e=>{
 			const data = JSON.parse(e.data)
 			this.processMessage(data);
 		});
@@ -106,10 +106,10 @@ export class Demo {
 	processMessage(msg) {
 		if (this.isControlling())
 			return;
-		if ('modelId' in msg) {
+		if ("modelId" in msg) {
 			this.setModel(msg.modelId);
 		}
-		if ('touch' in msg) {
+		if ("touch" in msg) {
 			const [x, y] = msg.touch;
 			const viewSize = this.getViewSize();
 			const [w, h] = viewSize
@@ -129,19 +129,19 @@ export class Demo {
 
 	connectControl() {
 		if (!this.isControlling()) {
-			const url = this.serverUrl+'control';
+			const url = this.serverUrl+"control";
 			const controlWS = this.controlWS = new WebSocket(url);
-			controlWS.addEventListener('open', ()=>{
-				console.log('connected to', url);
+			controlWS.addEventListener("open", ()=>{
+				console.log("connected to", url);
 				this.tryControl({modelId:this.modelId});
 			});
 			controlWS.onclose = controlWS.onerror = e=>{
-				if (e.reason == 'busy') {
-					$('#status').innerText = 'control is busy, try later';
-					$('#status').style.opacity = 1;
-					setTimeout(()=>{$('#status').style.opacity = 0;}, 2000);
+				if (e.reason == "busy") {
+					$("#status").innerText = "control is busy, try later";
+					$("#status").style.opacity = 1;
+					setTimeout(()=>{$("#status").style.opacity = 0;}, 2000);
 				} else {
-					$('#status').style.opacity = 0;
+					$("#status").style.opacity = 0;
 				}
 				console.log(`control disconnected (${e.reason})`);
 				if (this.controlWS == controlWS) {
@@ -149,8 +149,8 @@ export class Demo {
 				}
 			}
 			controlWS.onmessage = e=>{
-				$('#status').innerText = e.data;
-				$('#status').style.opacity = 1;
+				$("#status").innerText = e.data;
+				$("#status").style.opacity = 1;
 			};
 		}
 	}
@@ -193,8 +193,8 @@ export class Demo {
 			} else if (r > 200 && Math.max(l, u, d) < r * 0.25) {
 				this.switchModel(1);
 			} else if (u > 200 && Math.max(l, r, d) < u * 0.25) {
-				console.log('up!');
-				// const url = document.location.href.split('?')[0]+'?'+Math.random();
+				console.log("up!");
+				// const url = document.location.href.split("?")[0]+"?"+Math.random();
 				// document.location.href = url;
 				this.connectControl();
 
@@ -234,7 +234,7 @@ export class Demo {
 
 
 		twgl.bindFramebufferInfo(this.gl);
-		this.ca.draw(this.getViewSize(), 'color');
+		this.ca.draw(this.getViewSize(), "color");
 		requestAnimationFrame(()=>this.render());
 	}
 
@@ -245,9 +245,9 @@ export class Demo {
 		const viewSize = [canvas.width, canvas.height];
 		twgl.bindFramebufferInfo(this.gl);
 		this.ca.draw(viewSize);
-		const a = document.createElement('a');
+		const a = document.createElement("a");
 		a.href = canvas.toDataURL("image/png");
-		a.download = name + '.png';
+		a.download = name + ".png";
 		a.click();
 	}
 

@@ -1,91 +1,4 @@
-<!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-<script src="twgl-full.min.js"></script>
-<script src="dat.gui.min.js"></script>
-<script src="./libs/pako.min.js"></script>
-<script src="./libs/UPNG.min.js"></script>
-<script type="module" src="demo.js"></script>
-<script type="module" src="ca.js"></script>
-
-<style>
-	html, body {
-		margin: 0px;
-		font-family: "Google Sans", Arial, Helvetica, sans-serif;
-		color: #FFF;
-	}
-
-	canvas {
-		width: 100vw;
-		height: 100vh;
-	}
-
-	#fsButton {
-		position: fixed;
-		z-index: 10;
-		bottom: 20px; left:20px;
-	}
-
-	.centered {
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-	}
-
-	#info{
-		width: 300px;
-		background-color: rgba(0, 0, 0, 0.75);
-		padding: 20px;
-		z-index:5;
-	}
-
-	a:link {
-		color: red;
-	}
-
-	a:visited {
-		color: red;
-	}
-
-	.hint {
-		font-size: min(10vw, 8vh);
-		pointer-events: none;
-		white-space: nowrap;
-		opacity: 0;
-		transition: opacity 1s;
-		text-align: center;
-	}
-
-	#ui {
-		display: none;
-	}
-</style>
-
 <canvas id="glCanvas"></canvas>
-
-<div id="ui">
-	<div id="hint" class="centered hint">⇦ Swipe ⇨</div>
-
-	<div id="info" class="centered">
-		<b style="font-size: large;">Hexells</b>
-		<span style="font-size: smaller;">by <a href="https://twitter.com/zzznah">Alexander Mordvintsev</a></span>
-
-		<p>
-			is a Self-Organising System of cells, that was trained to build textures
-			using neighbour communication only. This work exposes the relation between
-			the life of an individual cell, and the cell collective as a whole.
-		</p>
-		<p> The system is based on
-			<a href="https://distill.pub/selforg/2021/textures/">Neural Cellular Automata</a>.
-		</p>
-		<div id="hideBtn" style="text-align: center;">
-			<button>Hide</button>
-		</div>
-	</div>
-
-	<button id="fsButton">Fullscreen</button>
-</div>
 
 <script type="module">
 
@@ -94,12 +7,7 @@ import { Demo } from "./demo.js"
 const $ = q => document.querySelector(q);
 const canvas = $("#glCanvas");
 
-const isScreenMode = window.self !== window.top;
-if (!isScreenMode) {
-	$("#ui").style.display = "inline";
-}
-
-window.demo = new Demo(canvas, isScreenMode);
+window.demo = new Demo(canvas);
 
 const frame = document.body;
 const requestFullscreen =
@@ -114,19 +22,5 @@ if (requestFullscreen === undefined) {
 $("#fsButton").onclick = () => {
 	requestFullscreen.call(frame, { navigationUI: "hide" });
 };
-
-document.addEventListener("fullscreenchange", (event) => {
-	if (document.fullscreenElement) {
-		$("#fsButton").style.display = "none";
-	} else {
-		$("#fsButton").style.display = "block";
-	}
-});
-
-$("#hideBtn").onclick = ()=>{
-	$("#info").style.display = "none";
-	$("#hint").style.opacity = 1;
-	setTimeout(() => {$("#hint").style.opacity = 0}, 2000);
-}
 
 </script>
