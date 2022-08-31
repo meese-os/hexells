@@ -1,6 +1,4 @@
 import { CA } from "./ca.js"
-// import { Sonic } from "./sonic.js"
-
 
 const $ = q => document.querySelector(q);
 
@@ -28,7 +26,6 @@ export class Demo {
 	}
 
 	setup(models) {
-		//this.sonic = new Sonic(gl, ca);
 		const canvas = this.canvas;
 
 		this.shuffledModelIds = models.model_names.map((_, i)=>[Math.random(), i]).sort().map(p=>p[1]);
@@ -255,43 +252,3 @@ export class Demo {
 	}
 
 };
-
-
-
-
-//   param.benchmark = ()=>{
-//     $('#log').insertAdjacentHTML('afterbegin', ca.benchmark());
-//   }
-//   gui.add(param, 'benchmark');
-
-//   function render() {
-//     if (param.active) {
-//       ca.step();
-//     }
-
-//     const dpr = window.devicePixelRatio || 1;
-//     canvas.width = Math.round(canvas.clientWidth * dpr);
-//     canvas.height = Math.round(canvas.clientHeight * dpr);
-//     const viewSize = [canvas.clientWidth, canvas.clientHeight];
-
-//     if (gesture && gesture.sonic) {
-//       const [x, y] = gesture.prevPos;
-//       const state = ca.peek(x, y, viewSize);
-//       sonic.play(state);
-//     } else {
-//       sonic.stop();
-//     }
-
-//     twgl.bindFramebufferInfo(gl);
-//     ca.draw(viewSize, 'color');
-//     sonic.draw(viewSize);
-//     // if (lastMousePos) {
-//     //   const d=200;
-//     //   gl.viewport(0, 0, 500*dpr, 32*dpr);
-//     //   ca.draw(viewSize, 'sonic');
-//     // }
-//     requestAnimationFrame(render);
-//   }
-
-//   requestAnimationFrame(render);
-// })

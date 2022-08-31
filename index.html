@@ -141,30 +141,4 @@ $("#hideBtn").onclick = ()=>{
 	setTimeout(() => {$("#hint").style.opacity = 0}, 2000);
 }
 
-// $("#hideBtn").onclick = ()=>{
-//   $("#info").style.display = "none";
-//   $("#hint").classList.add("hint-anim");
-
-//   const meter = new Tone.Meter({normalRange:true, smoothing: 0.5});
-//   const mic = new Tone.UserMedia().connect(meter);
-//   let maxVol = 0.0;
-//   mic.open().then(() => {
-//     // promise resolves when input is available
-//     console.log("mic open");
-
-//     setInterval(() => {
-//       const v = meter.getValue();
-//       $("#volume").value = v*100.0;
-//       if (v>0.04) {
-//         console.log(v);
-//         ca.disturb();
-//       }
-//     }, 100);
-//   }).catch(e => {
-//     // promise is rejected when the user doesn't have or allow mic access
-//     console.log("mic not open");
-//   });
-
-// };
-
 </script>
