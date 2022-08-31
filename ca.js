@@ -526,8 +526,12 @@ function createDenseInfo(gl, params, onready) {
 	const img = UPNG.decode(decodeBase64(params.data.split(",")[1]));
 	const data = new Uint8Array(UPNG.toRGBA8(img)[0]);
 	info.tex = twgl.createTexture(gl, {
-		width: img.width, height: img.height,
-		minMag: gl.NEAREST, src: data, // flipY: false, premultiplyAlpha: false,
+		width: img.width,
+		height: img.height,
+		minMag: gl.NEAREST,
+		src: data,
+		// flipY: false,
+		// premultiplyAlpha: false,
 	}, ()=>{
 		// info.ready = true;
 		// onready();
@@ -609,7 +613,9 @@ class CA {
 
 	disturb() {
 		this.runLayer(this.progs.align, this.buf.align, {
-			u_input: this.buf.newAlign, u_hexGrid: this.hexGrid, u_init: Math.random()*1000+1,
+			u_input: this.buf.newAlign,
+			u_hexGrid: this.hexGrid,
+			u_init: Math.random() * 1000 + 1,
 			u_r: -1,
 		});
 	}
@@ -646,8 +652,18 @@ class CA {
 			}
 		}
 
-		this.shuffleTex = twgl.createTexture(gl, { minMag: gl.NEAREST, width: gridW, height: shuffleH, src: shuffleBuf});
-		this.unshuffleTex = twgl.createTexture(gl, { minMag: gl.NEAREST, width: gridW, height: gridH, src: unshuffleBuf});
+		this.shuffleTex = twgl.createTexture(gl, {
+			minMag: gl.NEAREST,
+			width: gridW,
+			height: shuffleH,
+			src: shuffleBuf
+		});
+		this.unshuffleTex = twgl.createTexture(gl, {
+			minMag: gl.NEAREST,
+			width: gridW,
+			height: gridH,
+			src: unshuffleBuf
+		});
 		this.shuffleOfs = [0, 0];
 
 		const updateH = this.shuffledMode ? shuffleH : gridH;
@@ -664,12 +680,12 @@ class CA {
 			state: createTensor(gl, gridW, gridH, channel_n, stateQuantization),
 			newState: createTensor(gl, gridW, gridH, channel_n, stateQuantization),
 			perception: createTensor(gl, gridW, updateH, perception_n, stateQuantization),
-			sonic: createTensor(gl, sonicN*channel_n/4, 1, 4, stateQuantization),
+			sonic: createTensor(gl, sonicN * channel_n / 4, 1, 4, stateQuantization),
 		};
 
 		{
-			const {width, height} = this.buf.sonic.fbi;
-			this.sonicBuf = new Uint8Array(height*width*4);
+			const { width, height } = this.buf.sonic.fbi;
+			this.sonicBuf = new Uint8Array(height * width * 4);
 		}
 
 		for (let i = 0; i < this.layers.length; ++i) {
@@ -730,6 +746,10 @@ class CA {
 		}
 	}
 
+	/**
+	 * Measures performance of the program.
+	 * @returns {String}
+	 */
 	benchmark() {
 		const gl = this.gl;
 		const flushBuf = new Uint8Array(4);
@@ -779,11 +799,11 @@ class CA {
 	}
 
 	/**
-	 *
+	 * Calls the `paint` function with the given arguments.
 	 * @param {Number} x
 	 * @param {Number} y
 	 * @param {Number} r
-	 * @param {*} brush
+	 * @param {Number} brush
 	 * @param {Array} [viewSize=[128, 128]] [width, height]
 	 */
 	paint(x, y, r, brush, viewSize = [128, 128]) {
@@ -797,7 +817,9 @@ class CA {
 
 	peek(x, y, viewSize) {
 		this.runLayer(this.progs.peek, this.buf.sonic, {
-			u_pos: [x, y], u_viewSize: viewSize, u_input: this.buf.state
+			u_pos: [x, y],
+			u_viewSize: viewSize,
+			u_input: this.buf.state
 		});
 
 		const { width, height } = this.buf.sonic.fbi;
@@ -805,7 +827,7 @@ class CA {
 		twgl.bindFramebufferInfo(gl, this.buf.sonic.fbi);
 		gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, this.sonicBuf);
 
-		return {buf: this.sonicBuf, tex: this.buf.sonic.tex, pos: [x, y]};
+		return { buf: this.sonicBuf, tex: this.buf.sonic.tex, pos: [x, y] };
 	}
 
 	clearCircle(x, y, r, viewSize = [128, 128]) {
@@ -871,7 +893,8 @@ class CA {
 
 		gl.useProgram(this.progs.vis.program);
 		twgl.setBuffersAndAttributes(gl, this.progs.vis, this.quad);
-		const uniforms = { u_raw: 0.0,
+		const uniforms = {
+			u_raw: 0.0,
 			u_angle: this.rotationAngle / 180.0 * Math.PI,
 			u_alignment: this.alignment,
 			u_perceptionCircle: this.perceptionCircle,
