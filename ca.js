@@ -19,21 +19,25 @@ const vs_code = `
 	attribute vec4 position;
 	varying vec2 uv;
 	void main() {
-		uv = position.xy*0.5 + 0.5;
+		uv = position.xy * 0.5 + 0.5;
 		gl_Position = position;
 	}
 `;
 
-function defInput(name) {
-	return `
-		uniform Tensor ${name};
-		uniform sampler2D ${name}_tex;
+const defInput = (name) => `
+	uniform Tensor ${name};
+	uniform sampler2D ${name}_tex;
 
-		vec4 ${name}_read(vec2 pos, float ch) {return _read(${name}, ${name}_tex, pos, ch);}
-		vec4 ${name}_read01(vec2 pos, float ch) {return _read01(${name}, ${name}_tex, pos, ch);}
-		vec4 ${name}_readUV(vec2 uv) {return _readUV(${name}, ${name}_tex, uv);}
-	`;
-}
+	vec4 ${name}_read(vec2 pos, float ch) {
+		return _read(${name}, ${name}_tex, pos, ch);
+	}
+	vec4 ${name}_read01(vec2 pos, float ch) {
+		return _read01(${name}, ${name}_tex, pos, ch);
+	}
+	vec4 ${name}_readUV(vec2 uv) {
+		return _readUV(${name}, ${name}_tex, uv);
+	}
+`;
 
 const PREFIX = `
 	#extension GL_OES_standard_derivatives : enable
@@ -198,266 +202,263 @@ const PREFIX = `
 
 const PROGRAMS = {
 	paint: `
-	uniform vec2 u_pos;
-	uniform float u_r;
-	uniform vec4 u_brush;
+		uniform vec2 u_pos;
+		uniform float u_r;
+		uniform vec4 u_brush;
 
-	void main() {
-		if (u_r>0.0 && calcMouseDist(u_pos)>=80.0)
-		  discard;
-		setOutput(u_brush);
-	}`,
+		void main() {
+			if (u_r > 0.0 && calcMouseDist(u_pos) >= 80.0)
+				discard;
+			setOutput(u_brush);
+		}
+	`,
 	peek: `
-	uniform vec2 u_pos;
+		uniform vec2 u_pos;
 
-	vec2 getPeekPos(float i) {
-		float a = i*0.61803398875*2.0*PI;
-		float r = (u_viewSize.x+u_viewSize.y)/1000.0;
-		return vec2(cos(a), sin(a)) * sqrt(i) * r;
-	}
+		vec2 getPeekPos(float i) {
+			float a = i * 0.61803398875 * 2.0 * PI;
+			float r = (u_viewSize.x + u_viewSize.y) / 1000.0;
+			return vec2(cos(a), sin(a)) * sqrt(i) * r;
+		}
 
-	void main() {
-		float out_i = getOutputXY().x;
-		float i = floor(out_i / u_input.depth4);
-		float channel = floor(mod(out_i, u_input.depth4));
-		Hexel h = screen2hex(u_pos + getPeekPos(i));
-		setOutput(u_input_read(h.cellXY, channel));
-	}`,
+		void main() {
+			float out_i = getOutputXY().x;
+			float i = floor(out_i / u_input.depth4);
+			float channel = floor(mod(out_i, u_input.depth4));
+			Hexel h = screen2hex(u_pos + getPeekPos(i));
+			setOutput(u_input_read(h.cellXY, channel));
+		}
+	`,
 	align: `
-	uniform vec2 u_pos;
-	uniform float u_r;
-	uniform float u_init;
+		uniform vec2 u_pos;
+		uniform float u_r;
+		uniform float u_init;
 
-	const mat3 blur = mat3(1.0/9.0);
-	const mat3 blurHex = mat3(0.0,       1.0, 1.0,
-									   1.0, 1.0, 1.0,
-										  1.0, 1.0,        0.0)/7.0;
+		const mat3 blur = mat3(1.0 / 9.0);
+		const mat3 blurHex = mat3(0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0) / 7.0;
 
-	void main() {
-		vec2 xy = getOutputXY();
-		vec4 v = conv3x3(xy, 0.0, blur*(1.0-u_hexGrid) + blurHex*u_hexGrid);
-		v.xy = normalize(mix(u_input_read(xy, 0.0).xy, v.xy, 1.0));
-		setOutput(v);
+		void main() {
+			vec2 xy = getOutputXY();
+			vec4 v = conv3x3(xy, 0.0, blur * (1.0 - u_hexGrid) + blurHex * u_hexGrid);
+			v.xy = normalize(mix(u_input_read(xy, 0.0).xy, v.xy, 1.0));
+			setOutput(v);
 
-		if (u_init > 0.0) {
-			if (u_r>0.0 && calcMouseDist(u_pos)>=80.0)
-			  return;
-			float a = hash13(vec3(xy+vec2(34299.0, -56593.0), u_init)) * 2.0 * PI;
-			vec2 v = normalize(ang2vec(a)+0.2*ang2vec(u_init));
-			setOutput(vec4(v, 0.0, 0.0));
+			if (u_init > 0.0) {
+				if (u_r > 0.0 && calcMouseDist(u_pos) >= 80.0)
+					return;
+				float a = hash13(vec3(xy + vec2(34299.0, -56593.0), u_init)) * 2.0 * PI;
+				vec2 v = normalize(ang2vec(a) + 0.2 * ang2vec(u_init));
+				setOutput(vec4(v, 0.0, 0.0));
+			}
 		}
-	}`,
+	`,
 	perception: `
-	const mat3 sobelX = mat3(-1.0, 0.0, 1.0, -2.0, 0.0, 2.0, -1.0, 0.0, 1.0)/8.0;
-	const mat3 sobelY = mat3(-1.0,-2.0,-1.0, 0.0, 0.0, 0.0, 1.0, 2.0, 1.0)/8.0;
-	const mat3 gauss = mat3(1.0, 2.0, 1.0, 2.0, 4.0-16.0, 2.0, 1.0, 2.0, 1.0)/8.0;
-	const mat3 sobelXhex = mat3( 0.0,    -1.0, 1.0,
-									   -2.0, 0.0, 2.0,
-										 -1.0, 1.0,        0.0)/8.0;
+		const mat3 sobelX = mat3(-1.0, 0.0, 1.0, -2.0, 0.0, 2.0, -1.0, 0.0, 1.0) / 8.0;
+		const mat3 sobelY = mat3(-1.0,-2.0,-1.0, 0.0, 0.0, 0.0, 1.0, 2.0, 1.0) / 8.0;
+		const mat3 gauss = mat3(1.0, 2.0, 1.0, 2.0, 4.0-16.0, 2.0, 1.0, 2.0, 1.0) / 8.0;
+		const mat3 sobelXhex = mat3( 0.0, -1.0, 1.0, -2.0, 0.0, 2.0, -1.0, 1.0, 0.0) / 8.0;
+		const mat3 sobelYhex = mat3( 0.0, -2.0,-2.0, 0.0, 0.0, 0.0, 2.0, 2.0, 0.0) / 8.0;
+		const mat3 gaussHex = mat3(0.0, 2.0, 2.0, 2.0, 4.0-16.0, 2.0, 2.0, 2.0, 0.0) / 8.0;
 
-	const mat3 sobelYhex = mat3( 0.0,    -2.0,-2.0,
-										0.0, 0.0, 0.0,
-										  2.0, 2.0,        0.0)/8.0;
+		void main() {
+			vec2 xy = getOutputXY();
+			#ifdef SPARSE_UPDATE
+				xy = texture2D(u_shuffleTex, xy / u_output.size).xy * 255.0 + 0.5 + u_shuffleOfs;
+				xy = mod(xy, u_input.size);
+			#endif
+			float ch = getOutputChannel();
+			if (ch >= u_output.depth4)
+				return;
 
-	const mat3 gaussHex = mat3(0.0,       2.0, 2.0,
-									   2.0, 4.0-16.0, 2.0,
-										  2.0, 2.0,        0.0)/8.0;
-
-	void main() {
-		vec2 xy = getOutputXY();
-		#ifdef SPARSE_UPDATE
-			xy = texture2D(u_shuffleTex, xy/u_output.size).xy*255.0+0.5 + u_shuffleOfs;
-			xy = mod(xy, u_input.size);
-		#endif
-		float ch = getOutputChannel();
-		if (ch >= u_output.depth4)
-			return;
-
-		float filterBand = floor((ch+0.5)/u_input.depth4);
-		float inputCh = ch-filterBand*u_input.depth4;
-		if (filterBand < 0.5) {
-			setOutput(u_input_read(xy, inputCh));
-		} else if (filterBand < 2.5) {
-			vec4 dx = conv3x3(xy, inputCh, sobelX*(1.0-u_hexGrid) + sobelXhex*u_hexGrid);
-			vec4 dy = conv3x3(xy, inputCh, sobelY*(1.0-u_hexGrid) + sobelYhex*u_hexGrid);
-			vec2 dir = getCellDirection(xy);
-			float s = dir.x, c = dir.y;
-			setOutput(filterBand < 1.5 ? dx*c-dy*s : dx*s+dy*c);
-		} else {
-			setOutput(conv3x3(xy, inputCh, gauss*(1.0-u_hexGrid) + gaussHex*u_hexGrid));
-		}
-	}`,
-	dense: `
-	${defInput("u_control")}
-	uniform sampler2D u_weightTex;
-	uniform float u_seed, u_fuzz;
-	uniform vec2 u_weightCoefs; // scale, center
-	uniform vec2 u_layout;
-
-	const float MAX_PACKED_DEPTH = 32.0;
-
-	vec4 readWeightUnscaled(vec2 p) {
-		vec4 w = texture2D(u_weightTex, p);
-		return w-u_weightCoefs.y;
-	}
-
-	void main() {
-	  vec2 xy = getOutputXY();
-	  float ch = getOutputChannel();
-	  if (ch >= u_output.depth4)
-		  return;
-
-	  float dy = 1.0/(u_input.depth+1.0)/u_layout.y;
-	  vec2 p = vec2((ch+0.5)/u_output.depth4, dy*0.5);
-	  vec2 fuzz = (hash23(vec3(xy, u_seed+ch))-0.5)*u_fuzz;
-
-	  vec2 realXY = xy;
-	  #ifdef SPARSE_UPDATE
-		realXY = texture2D(u_shuffleTex, xy/u_output.size).xy*255.0+0.5 + u_shuffleOfs;
-	  #endif
-	  float modelIdx = u_control_read(realXY+fuzz, 0.0).x+0.5;
-	  p.x += floor(mod(modelIdx, u_layout.x));
-	  p.y += floor(modelIdx/u_layout.x);
-	  p /= u_layout;
-	  vec4 result = vec4(0.0);
-	  for (float i=0.0; i < MAX_PACKED_DEPTH; i+=1.0) {
-		  vec4 inVec = u_input_read(xy, i);
-		  result += inVec.x * readWeightUnscaled(p); p.y += dy;
-		  result += inVec.y * readWeightUnscaled(p); p.y += dy;
-		  result += inVec.z * readWeightUnscaled(p); p.y += dy;
-		  result += inVec.w * readWeightUnscaled(p); p.y += dy;
-		  if (i+1.5>u_input.depth4) {
-			  break;
-		  }
-	  }
-	  result += readWeightUnscaled(p);  // bias
-	  setOutput(result*u_weightCoefs.x);
-	}`,
-	update: `
-	${defInput("u_update")}
-	uniform float u_seed, u_updateProbability;
-
-	varying vec2 uv;
-
-	void main() {
-	  vec2 xy = getOutputXY();
-	  vec4 state = u_input_readUV(uv);
-	  vec4 update = vec4(0.0);
-	  #ifdef SPARSE_UPDATE
-		vec4 shuffleInfo = texture2D(u_unshuffleTex, fract((xy-u_shuffleOfs)/u_output.size));
-		if (shuffleInfo.z > 0.5) {
-			update = u_update_read(shuffleInfo.xy*255.0+0.5, getOutputChannel());
-		}
-	  #else
-		if (hash13(vec3(xy, u_seed)) <= u_updateProbability) {
-			update = u_update_readUV(uv);
-		}
-	  #endif
-	  setOutput(state + update);
-	}`,
-	vis: `
-	uniform float u_raw;
-	uniform float u_zoom;
-	uniform float u_perceptionCircle, u_arrows;
-	uniform float u_devicePixelRatio;
-
-	varying vec2 uv;
-
-	float clip01(float x) {
-		return min(max(x, 0.0), 1.0);
-	}
-
-	float peak(float x, float r) {
-		float y = x/r;
-		return exp(-y*y);
-	}
-
-	float getElement(vec4 v, float i) {
-		if (i<1.0) return v.x;
-		if (i<2.0) return v.y;
-		if (i<3.0) return v.z;
-		return v.w;
-	}
-
-	vec3 onehot3(float i) {
-		if (i<1.0) return vec3(1.0, 0.0, 0.0);
-		if (i<2.0) return vec3(0.0, 1.0, 0.0);
-		return vec3(0.0, 0.0, 1.0);
-	}
-
-	float sdTriangleIsosceles( in vec2 p, in vec2 q ) {
-		p.x = abs(p.x);
-		vec2 a = p - q*clamp( dot(p,q)/dot(q,q), 0.0, 1.0 );
-		vec2 b = p - q*vec2( clamp( p.x/q.x, 0.0, 1.0 ), 1.0 );
-		float s = -sign( q.y );
-		vec2 d = min( vec2( dot(a,a), s*(p.x*q.y-p.y*q.x) ),
-					  vec2( dot(b,b), s*(p.y-q.y)  ));
-		return -sqrt(d.x)*sign(d.y);
-	}
-
-	float aastep(float v) {
-		return clip01(v/fwidth(v)/u_devicePixelRatio);
-	}
-
-	float smoothstep(float t) {
-		t = clip01(t);
-		return t * t * (3.0 - 2.0 * t);
-	}
-
-	void spot(vec2 pos, float v, vec2 xy, inout vec3 rgb) {
-		v = sqrt(abs(v))*sign(v);
-		pos *= v*0.6;
-		float r = abs(v)*0.30;
-		rgb += clip01((r-length(xy-pos))/r)*0.2;
-	}
-
-	float sdBox( in vec2 p, in vec2 b )
-	{
-		vec2 d = abs(p)-b;
-		return length(max(d,0.0)) + min(max(d.x,d.y),0.0);
-	}
-
-	void main() {
-		vec2 xy = vec2(uv.x, 1.0-uv.y);
-		if (u_raw > 0.5) {
-			gl_FragColor = texture2D(u_input_tex, xy);
-			gl_FragColor.a = 1.0;
-		} else {
-			vec2 screenPos = xy*u_viewSize;
-			Hexel h = screen2hex(screenPos);
-			vec2 p = h.p;
-			h.cellXY += 0.5;
-
-			vec3 rgb = u_input_read(h.cellXY, 0.0).rgb/2.0+0.5;
-			if (4.0<h.zoom) {
-				vec2 dir = getCellDirection(floor(h.cellXY)+0.5);
+			float filterBand = floor((ch + 0.5) / u_input.depth4);
+			float inputCh = ch-filterBand*u_input.depth4;
+			if (filterBand < 0.5) {
+				setOutput(u_input_read(xy, inputCh));
+			} else if (filterBand < 2.5) {
+				vec4 dx = conv3x3(xy, inputCh, sobelX*(1.0 - u_hexGrid) + sobelXhex * u_hexGrid);
+				vec4 dy = conv3x3(xy, inputCh, sobelY*(1.0 - u_hexGrid) + sobelYhex * u_hexGrid);
+				vec2 dir = getCellDirection(xy);
 				float s = dir.x, c = dir.y;
-				float fade = clip01((h.zoom-4.0)/4.0);
-				float r = clip01((1.0-hex(p))*8.0);
-				r = pow(r, 0.2);
-				rgb *= mix(1.0, r, fade);
+				setOutput(filterBand < 1.5 ? dx*c - dy*s : dx*s + dy*c);
+			} else {
+				setOutput(conv3x3(xy, inputCh, gauss*(1.0 - u_hexGrid) + gaussHex * u_hexGrid));
+			}
+		}
+	`,
+	dense: `
+		${defInput("u_control")}
+		uniform sampler2D u_weightTex;
+		uniform float u_seed, u_fuzz;
+		uniform vec2 u_weightCoefs; // scale, center
+		uniform vec2 u_layout;
 
-				p = mat2(c, s, -s, c) * p;
+		const float MAX_PACKED_DEPTH = 32.0;
 
-				if (12.0 < h.zoom) {
-					float da = PI/12.0;
-					float a = -da;
-					vec4 v4;
-					vec3 spots;
-					for (float ch=0.0; ch<2.5; ++ch) {
-						v4 = (u_input_read01(h.cellXY, ch)-127.0/255.0)*2.0;
-						spot(ang2vec(a+=da), v4.x, p, spots);
-						spot(ang2vec(a+=da), v4.y, p, spots);
-						spot(ang2vec(a+=da), v4.z, p, spots);
-						spot(ang2vec(a+=da), v4.w, p, spots);
-					}
-					spots *= clip01((h.zoom-12.0)/3.0);
-					rgb += spots;
+		vec4 readWeightUnscaled(vec2 p) {
+			vec4 w = texture2D(u_weightTex, p);
+			return w - u_weightCoefs.y;
+		}
+
+		void main() {
+			vec2 xy = getOutputXY();
+			float ch = getOutputChannel();
+			if (ch >= u_output.depth4)
+				return;
+
+			float dy = 1.0 / (u_input.depth + 1.0) / u_layout.y;
+			vec2 p = vec2((ch + 0.5) / u_output.depth4, dy*0.5);
+			vec2 fuzz = (hash23(vec3(xy, u_seed + ch)) - 0.5) * u_fuzz;
+
+			vec2 realXY = xy;
+			#ifdef SPARSE_UPDATE
+			realXY = texture2D(u_shuffleTex, xy / u_output.size).xy*255.0 + 0.5 + u_shuffleOfs;
+			#endif
+			float modelIdx = u_control_read(realXY + fuzz, 0.0).x + 0.5;
+			p.x += floor(mod(modelIdx, u_layout.x));
+			p.y += floor(modelIdx/u_layout.x);
+			p /= u_layout;
+			vec4 result = vec4(0.0);
+			for (float i=0.0; i < MAX_PACKED_DEPTH; i+=1.0) {
+				vec4 inVec = u_input_read(xy, i);
+				result += inVec.x * readWeightUnscaled(p); p.y += dy;
+				result += inVec.y * readWeightUnscaled(p); p.y += dy;
+				result += inVec.z * readWeightUnscaled(p); p.y += dy;
+				result += inVec.w * readWeightUnscaled(p); p.y += dy;
+				if (i+1.5>u_input.depth4) {
+					break;
 				}
 			}
-			gl_FragColor = vec4(rgb, 1.0);
+
+			result += readWeightUnscaled(p);  // bias
+			setOutput(result*u_weightCoefs.x);
 		}
-	}`
+	`,
+	update: `
+		${defInput("u_update")}
+		uniform float u_seed, u_updateProbability;
+
+		varying vec2 uv;
+
+		void main() {
+			vec2 xy = getOutputXY();
+			vec4 state = u_input_readUV(uv);
+			vec4 update = vec4(0.0);
+			#ifdef SPARSE_UPDATE
+			vec4 shuffleInfo = texture2D(u_unshuffleTex, fract((xy - u_shuffleOfs) / u_output.size));
+			if (shuffleInfo.z > 0.5) {
+				update = u_update_read(shuffleInfo.xy*255.0 + 0.5, getOutputChannel());
+			}
+			#else
+			if (hash13(vec3(xy, u_seed)) <= u_updateProbability) {
+				update = u_update_readUV(uv);
+			}
+			#endif
+			setOutput(state + update);
+		}
+	`,
+	vis: `
+		uniform float u_raw;
+		uniform float u_zoom;
+		uniform float u_perceptionCircle, u_arrows;
+		uniform float u_devicePixelRatio;
+
+		varying vec2 uv;
+
+		float clip01(float x) {
+			return min(max(x, 0.0), 1.0);
+		}
+
+		float peak(float x, float r) {
+			float y = x/r;
+			return exp(-y*y);
+		}
+
+		float getElement(vec4 v, float i) {
+			if (i < 1.0) return v.x;
+			if (i < 2.0) return v.y;
+			if (i < 3.0) return v.z;
+			return v.w;
+		}
+
+		vec3 onehot3(float i) {
+			if (i < 1.0) return vec3(1.0, 0.0, 0.0);
+			if (i < 2.0) return vec3(0.0, 1.0, 0.0);
+			return vec3(0.0, 0.0, 1.0);
+		}
+
+		float sdTriangleIsosceles(in vec2 p, in vec2 q) {
+			p.x = abs(p.x);
+			vec2 a = p - q*clamp( dot(p,q)/dot(q,q), 0.0, 1.0 );
+			vec2 b = p - q*vec2( clamp( p.x/q.x, 0.0, 1.0 ), 1.0 );
+			float s = -sign( q.y );
+			vec2 d = min( vec2( dot(a,a), s*(p.x*q.y-p.y*q.x) ),
+							vec2( dot(b,b), s*(p.y-q.y)  ));
+			return -sqrt(d.x)*sign(d.y);
+		}
+
+		float aastep(float v) {
+			return clip01(v / fwidth(v) / u_devicePixelRatio);
+		}
+
+		float smoothstep(float t) {
+			t = clip01(t);
+			return t * t * (3.0 - 2.0 * t);
+		}
+
+		void spot(vec2 pos, float v, vec2 xy, inout vec3 rgb) {
+			v = sqrt(abs(v)) * sign(v);
+			pos *= v*0.6;
+			float r = abs(v) * 0.30;
+			rgb += clip01((r - length(xy - pos)) / r) * 0.2;
+		}
+
+		float sdBox(in vec2 p, in vec2 b) {
+			vec2 d = abs(p) - b;
+			return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+		}
+
+		void main() {
+			vec2 xy = vec2(uv.x, 1.0-uv.y);
+			if (u_raw > 0.5) {
+				gl_FragColor = texture2D(u_input_tex, xy);
+				gl_FragColor.a = 1.0;
+			} else {
+				vec2 screenPos = xy * u_viewSize;
+				Hexel h = screen2hex(screenPos);
+				vec2 p = h.p;
+				h.cellXY += 0.5;
+
+				vec3 rgb = u_input_read(h.cellXY, 0.0).rgb / 2.0 + 0.5;
+				if (4.0 < h.zoom) {
+					vec2 dir = getCellDirection(floor(h.cellXY) + 0.5);
+					float s = dir.x, c = dir.y;
+					float fade = clip01((h.zoom - 4.0) / 4.0);
+					float r = clip01((1.0 - hex(p)) * 8.0);
+					r = pow(r, 0.2);
+					rgb *= mix(1.0, r, fade);
+
+					p = mat2(c, s, -s, c) * p;
+
+					if (12.0 < h.zoom) {
+						float da = PI/12.0;
+						float a = -da;
+						vec4 v4;
+						vec3 spots;
+						for (float ch = 0.0; ch < 2.5; ++ch) {
+							v4 = (u_input_read01(h.cellXY, ch) - 127.0 / 255.0) * 2.0;
+							spot(ang2vec(a+=da), v4.x, p, spots);
+							spot(ang2vec(a+=da), v4.y, p, spots);
+							spot(ang2vec(a+=da), v4.z, p, spots);
+							spot(ang2vec(a+=da), v4.w, p, spots);
+						}
+						spots *= clip01((h.zoom - 12.0) / 3.0);
+						rgb += spots;
+					}
+				}
+				gl_FragColor = vec4(rgb, 1.0);
+			}
+		}
+	`
 };
 
 function createPrograms(gl, defines = "") {
@@ -511,8 +512,14 @@ function decodeBase64(b64) {
 function createDenseInfo(gl, params, onready) {
 	const coefs = [params.scale, 127.0 / 255.0];
 	const [in_n, out_n] = params.shape;
-	const info = { coefs, layout: params.layout, in_n: in_n - 1, out_n,
-		quantScaleZero: params.quant_scale_zero, ready: false };
+	const info = {
+		coefs,
+		layout: params.layout,
+		in_n: in_n - 1,
+		out_n,
+		quantScaleZero: params.quant_scale_zero,
+		ready: false
+	};
 
 	// workaround against iOS WebKit bug (https://bugs.webkit.org/show_bug.cgi?id=138477)
 	// non-premultiplied PNG were decoded incorrectly
@@ -537,7 +544,8 @@ function createDenseInfo(gl, params, onready) {
 /**
  * Usage:
  * ```
- * const ca = new CA(gl, models, [W, H]);
+ * const gui = new dat.GUI();
+ * const ca = new CA(gl, models, [W, H], gui);
  * ca.step();
  *
  * ca.paint(x, y, radius, modelIndex);
@@ -551,10 +559,11 @@ function createDenseInfo(gl, params, onready) {
  * @param {WebGLRenderingContext} gl
  * @param {Object} models
  * @param {Array} gridSize [W, H]
+ * @param {dat.GUI} gui
  * @param {Function} [onready=()=>{}]
 */
 class CA {
-	constructor(gl, models, gridSize, onready) {
+	constructor(gl, models, gridSize, gui, onready) {
 		this.onready = onready || (() => {});
 		this.gl = gl;
 		this.gridSize = gridSize || [96, 96];
@@ -584,6 +593,16 @@ class CA {
 		const visNames = Object.getOwnPropertyNames(this.buf);
 		visNames.push("color");
 
+		if (gui) {
+			gui.add(this, "rotationAngle").min(0.0).max(360.0);
+			gui.add(this, "alignment", { cartesian: 0, polar: 1, bipolar: 2 }).listen();
+			gui.add(this, "fuzz").min(0.0).max(128.0);
+			gui.add(this, "perceptionCircle").min(0.0).max(1.0);
+			gui.add(this, "visMode", visNames);
+			gui.add(this, "hexGrid").min(0.0).max(1.0);
+			gui.add(this, "disturb");
+		}
+
 		this.clearCircle(0, 0, -1);
 		this.disturb();
 	}
@@ -595,11 +614,14 @@ class CA {
 		});
 	}
 
-	disturbCircle(x, y, r, viewSize) {
-		viewSize = viewSize || [128, 128];
+	disturbCircle(x, y, r, viewSize = [128, 128]) {
 		this.runLayer(this.progs.align, this.buf.align, {
-			u_input: this.buf.newAlign, u_hexGrid: this.hexGrid, u_init: Math.random()*1000+1,
-			u_pos: [x, y], u_r: r, u_viewSize: viewSize,
+			u_input: this.buf.newAlign,
+			u_hexGrid: this.hexGrid,
+			u_init: Math.random() * 1000 + 1,
+			u_pos: [x, y],
+			u_r: r,
+			u_viewSize: viewSize,
 		});
 	}
 
@@ -650,38 +672,43 @@ class CA {
 			this.sonicBuf = new Uint8Array(height*width*4);
 		}
 
-		for (let i=0; i<this.layers.length; ++i) {
+		for (let i = 0; i < this.layers.length; ++i) {
 			const layer = this.layers[i];
 			this.buf[`layer${i}`] = createTensor(gl, gridW, updateH, layer.out_n, layer.quantScaleZero);
 		}
 	}
 
-	step(stage) {
-		stage = stage || "all";
-		if (!this.layers.every(l=>l.ready))
-			return;
+	step(stage = "all") {
+		if (!this.layers.every((l) => l.ready)) return;
 
 		if (stage == "all") {
 			const [gridW, gridH] = this.gridSize;
-			this.shuffleOfs = [Math.floor(Math.random() * gridW), Math.floor(Math.random() * gridH)];
+			this.shuffleOfs = [
+				Math.floor(Math.random() * gridW),
+				Math.floor(Math.random() * gridH)
+			];
 		}
 
 		if (stage == "all" || stage == "align") {
 			this.runLayer(this.progs.align, this.buf.newAlign, {
-				u_input: this.buf.align, u_hexGrid: this.hexGrid, u_init: 0.0
+				u_input: this.buf.align,
+				u_hexGrid: this.hexGrid,
+				u_init: 0.0,
 			});
 		}
 
 		if (stage == "all" || stage == "perception") {
 			this.runLayer(this.progs.perception, this.buf.perception, {
-				u_input: this.buf.state, u_angle: this.rotationAngle / 180.0 * Math.PI,
+				u_input: this.buf.state,
+				u_angle: this.rotationAngle / 180.0 * Math.PI,
 				u_alignTex: this.buf.newAlign,
-				u_alignment: this.alignment, u_hexGrid: this.hexGrid
+				u_alignment: this.alignment,
+				u_hexGrid: this.hexGrid,
 			});
 		}
 
 		let inputBuf = this.buf.perception;
-		for (let i=0; i<this.layers.length; ++i) {
+		for (let i = 0; i < this.layers.length; ++i) {
 			if (stage == "all" || stage == `layer${i}`)
 				this.runDense(this.buf[`layer${i}`], inputBuf, this.layers[i]);
 			inputBuf = this.buf[`layer${i}`];
@@ -689,9 +716,11 @@ class CA {
 
 		if (stage == "all" || stage == "newState") {
 			this.runLayer(this.progs.update, this.buf.newState, {
-				u_input: this.buf.state, u_update: inputBuf,
+				u_input: this.buf.state,
+				u_update: inputBuf,
 				u_unshuffleTex: this.unshuffleTex,
-				u_seed: Math.random() * 1000, u_updateProbability: this.updateProbability
+				u_seed: Math.random() * 1000,
+				u_updateProbability: this.updateProbability
 			});
 		}
 
@@ -749,10 +778,20 @@ class CA {
 		return `${(total).toFixed(2)} ms/step, ${(1000.0 / total).toFixed(2)} step/sec\n` + perOpStr + "\n\n";
 	}
 
-	paint(x, y, r, brush, viewSize) {
-		viewSize = viewSize || [128, 128];
+	/**
+	 *
+	 * @param {Number} x
+	 * @param {Number} y
+	 * @param {Number} r
+	 * @param {*} brush
+	 * @param {Array} [viewSize=[128, 128]] [width, height]
+	 */
+	paint(x, y, r, brush, viewSize = [128, 128]) {
 		this.runLayer(this.progs.paint, this.buf.control, {
-			u_pos: [x, y], u_r: r, u_brush: [brush, 0, 0, 0], u_viewSize: viewSize,
+			u_pos: [x, y],
+			u_r: r,
+			u_brush: [brush, 0, 0, 0],
+			u_viewSize: viewSize,
 		});
 	}
 
@@ -769,10 +808,12 @@ class CA {
 		return {buf: this.sonicBuf, tex: this.buf.sonic.tex, pos: [x, y]};
 	}
 
-	clearCircle(x, y, r, viewSize) {
-		viewSize = viewSize || [128, 128];
+	clearCircle(x, y, r, viewSize = [128, 128]) {
 		this.runLayer(this.progs.paint, this.buf.state, {
-			u_pos: [x, y], u_r: r, u_brush: [0, 0, 0, 0], u_viewSize: viewSize,
+			u_pos: [x, y],
+			u_r: r,
+			u_brush: [0, 0, 0, 0],
+			u_viewSize: viewSize,
 		});
 	}
 
@@ -809,14 +850,18 @@ class CA {
 		twgl.setUniforms(program, uniforms);
 		twgl.drawBufferInfo(gl, this.quad);
 
-		return { programName: program.name, output }
+		return { programName: program.name, output };
 	}
 
 	runDense(output, input, layer) {
 		return this.runLayer(this.progs.dense, output, {
-			u_input: input, u_control: this.buf.control,
-			u_weightTex: layer.tex, u_weightCoefs: layer.coefs, u_layout: layer.layout,
-			u_seed: Math.random() * 1000, u_fuzz: this.fuzz
+			u_input: input,
+			u_control: this.buf.control,
+			u_weightTex: layer.tex,
+			u_weightCoefs: layer.coefs,
+			u_layout: layer.layout,
+			u_seed: Math.random() * 1000,
+			u_fuzz: this.fuzz
 		});
 	}
 

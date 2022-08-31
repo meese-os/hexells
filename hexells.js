@@ -1,4 +1,5 @@
 const CA = require("./ca.js");
+const dat = require("dat.gui");
 const twgl = require("twgl.js");
 
 /**
@@ -7,6 +8,7 @@ const twgl = require("twgl.js");
  * @property {Number} brushRadius
  * @property {Number} stepPerFrame
  * @property {Number} timePerModel
+ * @property {Boolean} responsive
  */
 
 class Hexells {
@@ -27,9 +29,20 @@ class Hexells {
     this.brushRadius = options.brushRadius ?? 16;
     this.stepPerFrame = options.stepPerFrame ?? 1;
 		this.timePerModel = options.timePerModel ?? 20 * 1000;
+		this.responsive = options.responsive ?? false;
+
+		let gui;
+		if (this.responsive) {
+			gui = this.gui = new dat.GUI();
+			gui.hide();
+			gui.add(this, "brushRadius", 1, 40);
+			gui.add(this, "stepPerFrame", 0, 6, 1);
+		} else {
+			gui = this.gui = null;
+		}
 
 		const models = require("./models.json");
-		this.ca = new CA(this.gl, models, [160, 160], () =>
+		this.ca = new CA(this.gl, models, [160, 160], gui, () =>
 			this.setup(models)
 		);
   }
@@ -45,7 +58,55 @@ class Hexells {
 
     this.guesture = null;
 
-    setInterval(() => this.switchModel(1), this.timePerModel);
+		if (this.responsive) {
+			const mouseEvent = (f) => (e) => {
+				e.preventDefault();
+				f([e.offsetX, e.offsetY], e);
+			};
+
+			const touchEvent = (f) => (e) => {
+				e.preventDefault();
+				const rect = canvas.getBoundingClientRect();
+				for (const t of e.touches) {
+					const xy = [t.clientX - rect.left, t.clientY - rect.top];
+					f(xy, e);
+				}
+			}
+
+			canvas.addEventListener("mousedown", mouseEvent((xy, e) => {
+				if (e.buttons == 1) {
+					this.startGestue(xy);
+					this.touch(xy);
+				}
+			}));
+			canvas.addEventListener("mousemove", mouseEvent((xy, e) => {
+				if (e.buttons == 1) {
+					this.touch(xy);
+				}
+			}));
+			canvas.addEventListener("mouseup", mouseEvent(
+				(xy) => this.endGestue(xy))
+			);
+			canvas.addEventListener("touchstart", touchEvent((xy, e) => {
+				if (e.touches.length == 1) {
+					this.startGestue(xy);
+				} else {
+					// cancel guesture
+					this.gesture = null;
+				}
+				this.touch(xy);
+			}));
+			canvas.addEventListener("touchmove", touchEvent(
+				(xy) => this.touch(xy))
+			);
+			canvas.addEventListener("touchend", (xy) => this.endGestue(xy));
+			document.addEventListener("keypress", (e) => {
+				if (e.key == "a") this.switchModel(1);
+				if (e.key == "z") this.switchModel(-1);
+			});
+		} else {
+			setInterval(() => this.switchModel(1), this.timePerModel);
+		}
 
     requestAnimationFrame(() => this.render());
   }
@@ -73,7 +134,7 @@ class Hexells {
       g.prevPos = xy;
     }
 
-    const viewSize = getViewSize();
+    const viewSize = this.getViewSize();
     this.ca.clearCircle(x, y, this.brushRadius, viewSize);
   }
 
