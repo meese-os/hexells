@@ -3,167 +3,147 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
 <script src="twgl-full.min.js"></script>
 <script src="dat.gui.min.js"></script>
-<!-- <script src="seedrandom.min.js"></script> -->
-<!-- <script src="live.js"></script> -->
-<script src="pako.min.js"></script>
-<script src="UPNG.min.js"></script>
-<script type='module' src="demo.js"></script>
-<script type='module' src="ca.js"></script>
-<!-- <script src="Tone.js" integrity="sha512-nUjml8mN4CNYqBAy0ndDrd8pJV/eTtBNDsnvNtPqozx9/BccUeWSoKW14qWkQUnhuh8E3m+yra3qdzM68lqPEQ==" crossorigin="anonymous"></script> -->
-
-<!-- Global site tag (gtag.js) - Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=UA-15552566-1"></script>
-<script>
-window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-
-gtag('config', 'UA-15552566-1');
-</script>
+<script src="./libs/pako.min.js"></script>
+<script src="./libs/UPNG.min.js"></script>
+<script type="module" src="demo.js"></script>
+<script type="module" src="ca.js"></script>
 
 <style>
 html, body {
-  margin: 0px;
-  font-family: 'Google Sans', Arial, Helvetica, sans-serif;
-  color: #FFF;
-}
-canvas {
-  width: 100vw;
-  height: 100vh;
-}
+	margin: 0px;
+	font-family: "Google Sans", Arial, Helvetica, sans-serif;
+	color: #FFF;
+	}
+	canvas {
+		width: 100vw;
+		height: 100vh;
+	}
 
-#fsButton {
-  position: fixed;
-  z-index: 10;
-  bottom: 20px; left:20px;
-}
+	#fsButton {
+		position: fixed;
+		z-index: 10;
+		bottom: 20px; left:20px;
+	}
 
-.centered { 
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
+	.centered {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+	}
 
-#info{
-  width: 300px;
-  background-color: rgba(0, 0, 0, 0.75);
-  padding: 20px;
-  z-index:5;
-}
+	#info{
+		width: 300px;
+		background-color: rgba(0, 0, 0, 0.75);
+		padding: 20px;
+		z-index:5;
+	}
 
-a:link {
-  color: red;
-}
+	a:link {
+		color: red;
+	}
 
-a:visited {
-  color: red;
-}
+	a:visited {
+		color: red;
+	}
 
-.hint {
-  font-size: min(10vw, 8vh);
-  pointer-events: none;
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 1s;
-  text-align: center;
-}
+	.hint {
+		font-size: min(10vw, 8vh);
+		pointer-events: none;
+		white-space: nowrap;
+		opacity: 0;
+		transition: opacity 1s;
+		text-align: center;
+	}
 
-#ui {
-  display: none;
-}
+	#ui {
+		display: none;
+	}
 
-#status { 
-  pointer-events: none;
-  position: absolute;
-  top: 0px;
-  width: 100%;
-  text-align: center;
-  background-color: rgba(0, 0, 0, 0.75);
-  transition: opacity 0.5s;
-  opacity: 0;
-}
-
-
+	#status {
+		pointer-events: none;
+		position: absolute;
+		top: 0px;
+		width: 100%;
+		text-align: center;
+		background-color: rgba(0, 0, 0, 0.75);
+		transition: opacity 0.5s;
+		opacity: 0;
+	}
 </style>
 
 <canvas id="glCanvas"></canvas>
 
-<div id='ui'>
+<div id="ui">
 
-<div id='status' class=''>sdfsladf;lk</div> 
-<div id='hint' class='centered hint'>⇧<br>⇦ Swipe ⇨</div>
+<div id="status" class="">sdfsladf;lk</div>
+	<div id="hint" class="centered hint">⇦ Swipe ⇨</div>
 
-<div id='info' class='centered'>
-  <b style="font-size: large;">Hexells</b>
-  <span style="font-size: smaller;">by <a href="https://twitter.com/zzznah">Alexander Mordvintsev</a></span>
+	<div id="info" class="centered">
+		<b style="font-size: large;">Hexells</b>
+		<span style="font-size: smaller;">by <a href="https://twitter.com/zzznah">Alexander Mordvintsev</a></span>
 
-  <p>
-    is a Self-Organising System of cells, that was trained to build textures
-    using neighbour communication only. This work exposes the relation between
-    the life of an individual cell, and the cell collective as a whole.
-  </p>
-  <p> The system is based on
-    <a href="https://distill.pub/selforg/2021/textures/">Neural Cellular Automata</a>.
-  </p>
-  <p style="font-size: large;">
-    Touch to interact, swipe ⇦ or ⇨ to change the pattern.
-    Swipe&nbsp;⇧ to share the pattern with others!
-  </p>
-  <div id="hideBtn" style="text-align: center;"><button>Hide</button></div>
-</div>
+		<p>
+			is a Self-Organising System of cells, that was trained to build textures
+			using neighbour communication only. This work exposes the relation between
+			the life of an individual cell, and the cell collective as a whole.
+		</p>
+		<p> The system is based on
+			<a href="https://distill.pub/selforg/2021/textures/">Neural Cellular Automata</a>.
+		</p>
+		<div id="hideBtn" style="text-align: center;">
+			<button>Hide</button>
+		</div>
+	</div>
 
-<button id="fsButton">Fullscreen</button>
-
-<!-- <meter style="position: fixed; top:20px; left: 20px;" id="volume" value="0" min="0" max="100"></meter> -->
-
+	<button id="fsButton">Fullscreen</button>
 </div>
 
 <script type="module">
 
 import { Demo } from "./demo.js"
 
-
-const $ = q=>document.querySelector(q);
-const canvas = $('#glCanvas');
+const $ = q => document.querySelector(q);
+const canvas = $("#glCanvas");
 
 const isScreenMode = window.self !== window.top;
-console.log('isScreenMode:', isScreenMode);
 if (!isScreenMode) {
-  $('#ui').style.display = 'inline';
+	$("#ui").style.display = "inline";
 }
-
 
 window.demo = new Demo(canvas, isScreenMode);
 
 const frame = document.body;
-const requestFullscreen = frame.requestFullscreen
-    || frame.webkitRequestFullscreen || frame.msRequestFullscreen;
+const requestFullscreen =
+	frame.requestFullscreen
+	|| frame.webkitRequestFullscreen
+	|| frame.msRequestFullscreen;
+
 if (requestFullscreen === undefined) {
-  $('#fsButton').style.display = 'none';
+	$("#fsButton").style.display = "none";
 }
-$('#fsButton').onclick = ()=>{
-  requestFullscreen.call(frame, {navigationUI: "hide" });
+
+$("#fsButton").onclick = ()=>{
+	requestFullscreen.call(frame, {navigationUI: "hide" });
 };
 
-document.addEventListener('fullscreenchange', (event) => {
-  if (document.fullscreenElement) {
-    $('#fsButton').style.display = "none";
-  } else {
-    $('#fsButton').style.display = "block";
-  }
+document.addEventListener("fullscreenchange", (event) => {
+	if (document.fullscreenElement) {
+		$("#fsButton").style.display = "none";
+	} else {
+		$("#fsButton").style.display = "block";
+	}
 });
 
-$('#hideBtn').onclick = ()=>{
-  $('#info').style.display = 'none';
-  $('#hint').style.opacity = 1;
-  setTimeout(()=>{$('#hint').style.opacity = 0}, 2000);
+$("#hideBtn").onclick = ()=>{
+	$("#info").style.display = "none";
+	$("#hint").style.opacity = 1;
+	setTimeout(() => {$("#hint").style.opacity = 0}, 2000);
 }
 
-
-// $('#hideBtn').onclick = ()=>{
-//   $('#info').style.display = 'none';
-//   $('#hint').classList.add('hint-anim');
+// $("#hideBtn").onclick = ()=>{
+//   $("#info").style.display = "none";
+//   $("#hint").classList.add("hint-anim");
 
 //   const meter = new Tone.Meter({normalRange:true, smoothing: 0.5});
 //   const mic = new Tone.UserMedia().connect(meter);
@@ -174,11 +154,11 @@ $('#hideBtn').onclick = ()=>{
 
 //     setInterval(() => {
 //       const v = meter.getValue();
-//       $('#volume').value = v*100.0;
+//       $("#volume").value = v*100.0;
 //       if (v>0.04) {
 //         console.log(v);
 //         ca.disturb();
-//       }        
+//       }
 //     }, 100);
 //   }).catch(e => {
 //     // promise is rejected when the user doesn't have or allow mic access
