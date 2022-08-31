@@ -14,7 +14,11 @@
 	canvas.width = window.innerWidth;
 	canvas.height = window.innerHeight;
 
+	const options = {
+		responsive: true,
+	};
+
 	// `Hexells` is in the window scope
-	new Hexells(canvas);
+	new Hexells(canvas, options);
 	document.body.appendChild(canvas);
 </script>

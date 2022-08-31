@@ -21,3 +21,12 @@ document.body.appendChild(canvas);
 ```
 
 <!-- TODO: Example for `npm` as well -->
+
+## Configuration
+
+Available parameters (within the `options` argument):
+
+- `brushRadius` The size of the brush to use, in pixels. Defaults to `16`
+- `stepPerFrame` The number of steps to take when generating and displaying each frame. Defaults to `1`
+- `timePerModel` The number of milliseconds to wait before generating and displaying a different model. Defaults to `20000`
+- `responsive` Whether or not to respond to input from the client. Defaults to `false`
