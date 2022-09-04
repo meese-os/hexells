@@ -1,5 +1,8 @@
 # Hexells
 
+![Total NPM Downloads](https://img.shields.io/npm/dt/hexells.svg?label=total%20downloads)
+![Monthly NPM Downloads](https://img.shields.io/npm/dm/hexells?label=monthly%20downloads)
+
 ## Introduction
 
 **Hexells** is a Self-Organising System of cells, that was trained to build textures using neighbour communication only. This work exposes the relation between the life of an individual cell, and the cell collective as a whole. The original library belongs to [Alexander Mordvintsev](https://twitter.com/zzznah), and you can see the demonstration of his implementation [here](https://znah.net/hexells/).
