@@ -14,8 +14,21 @@
 	canvas.width = window.innerWidth;
 	canvas.height = window.innerHeight;
 
+	/**
+	 * Ensures that the canvas will always be the smallest possible
+	 * size that covers the screen.
+	 */
+	 function windowResize() {
+		canvas.width = window.innerWidth;
+		canvas.height = window.innerHeight;
+	}
+
+	// Add the window resize event listener
+	window.addEventListener("resize", windowResize);
+
 	const options = {
 		responsive: true,
+		fps: 10,
 	};
 
 	// `Hexells` is in the window scope

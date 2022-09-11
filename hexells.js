@@ -3,13 +3,24 @@ const dat = require("dat.gui");
 const twgl = require("twgl.js");
 
 /**
+ * Ensures that only valid `powerPreference` options are
+ * passed to the constructor.
+ */
+const powerOptions = [
+	"high-performance",
+	"low-power",
+	"default",
+];
+
+/**
  * Used to customize the behavior and appearance of Hexells.
  * @typedef {Object} HexellsOptions
+ * @property {String} powerPreference
  * @property {Number} brushRadius
  * @property {Number} stepPerFrame
  * @property {Number} timePerModel
  * @property {Boolean} responsive
- * @property {String} powerPreference - "high-performance", "low-power", or "default"
+ * @property {Number} fps
  */
 
 /**
@@ -24,12 +35,17 @@ class Hexells {
 	 * @param {HexellsOptions} options
 	 */
 	constructor(canvas, options = {}) {
+		const powerPreference = options.powerPreference || "default";
+		if (!powerOptions.includes(powerPreference)) {
+			throw new Error(`Invalid powerPreference: ${powerPreference}`);
+		}
+
 		this.canvas = canvas;
 		this.options = options;
 		this.gl = canvas.getContext("webgl", {
 			alpha: false,
 			desynchronized: true,
-			powerPreference: options.powerPreference ?? "default"
+			powerPreference
 		});
 
 		if (!this.gl) {
@@ -44,6 +60,7 @@ class Hexells {
 		this.stepPerFrame = options.stepPerFrame ?? 1;
 		this.timePerModel = options.timePerModel ?? 20 * 1000;
 		this.responsive = options.responsive ?? false;
+		this.fps = 1000 / (options.fps ?? 25);
 
 		let gui;
 		if (this.responsive) {
@@ -201,11 +218,15 @@ class Hexells {
 
 		twgl.bindFramebufferInfo(this.gl);
 		this.ca.draw(this.getViewSize(), "color");
-		hexellsAnimation = requestAnimationFrame(() => this.render());
+
+		setTimeout(() => {
+			hexellsAnimation = requestAnimationFrame(() => this.render());
+		}, this.fps);
 	}
 
 	destroy() {
 		cancelAnimationFrame(hexellsAnimation);
+		hexellsAnimation = null;
 	}
 }
 

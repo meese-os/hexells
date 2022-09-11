@@ -27,8 +27,9 @@ document.body.appendChild(canvas);
 
 Available parameters (within the `options` argument):
 
+- `powerPreference` The power preference to use when creating the WebGL context. Defaults to `"default"`
 - `brushRadius` The size of the brush to use, in pixels. Defaults to `16`
 - `stepPerFrame` The number of steps to take when generating and displaying each frame. Defaults to `1`
 - `timePerModel` The number of milliseconds to wait before generating and displaying a different model. Defaults to `20000`
 - `responsive` Whether or not to respond to input from the client. Defaults to `false`
-- `powerPreference` The power preference to use when creating the WebGL context. Defaults to `"default"`
+- `fps` The approximate number of frames per second to render. Defaults to `25`
