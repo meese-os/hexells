@@ -23,8 +23,6 @@ new Hexells(canvas);
 document.body.appendChild(canvas);
 ```
 
-<!-- TODO: Example for `npm` as well -->
-
 ## Configuration
 
 Available parameters (within the `options` argument):
@@ -33,3 +31,4 @@ Available parameters (within the `options` argument):
 - `stepPerFrame` The number of steps to take when generating and displaying each frame. Defaults to `1`
 - `timePerModel` The number of milliseconds to wait before generating and displaying a different model. Defaults to `20000`
 - `responsive` Whether or not to respond to input from the client. Defaults to `false`
+- `powerPreference` The power preference to use when creating the WebGL context. Defaults to `"low-power"`
