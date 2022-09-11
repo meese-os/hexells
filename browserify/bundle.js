@@ -1030,6 +1030,7 @@ const twgl = require("twgl.js");
  * @property {Number} stepPerFrame
  * @property {Number} timePerModel
  * @property {Boolean} responsive
+ * @property {String} powerPreference - "high-performance", "low-power", or "default"
  */
 
 /**
@@ -1049,7 +1050,7 @@ class Hexells {
 		this.gl = canvas.getContext("webgl", {
 			alpha: false,
 			desynchronized: true,
-			powerPreference: "high-performance"
+			powerPreference: options.powerPreference ?? "low-power"
 		});
 
 		if (!this.gl) {
