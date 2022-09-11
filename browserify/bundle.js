@@ -1050,7 +1050,7 @@ class Hexells {
 		this.gl = canvas.getContext("webgl", {
 			alpha: false,
 			desynchronized: true,
-			powerPreference: options.powerPreference ?? "low-power"
+			powerPreference: options.powerPreference ?? "default"
 		});
 
 		if (!this.gl) {
