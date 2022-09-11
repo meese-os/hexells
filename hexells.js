@@ -11,6 +11,11 @@ const twgl = require("twgl.js");
  * @property {Boolean} responsive
  */
 
+/**
+ * Used to cancel the Hexells animation loop when desired.
+ */
+let hexellsAnimation;
+
 class Hexells {
 	/**
 	 * Creates a Hexells instance.
@@ -117,7 +122,7 @@ class Hexells {
 			setInterval(() => this.switchModel(1), this.timePerModel);
 		}
 
-		requestAnimationFrame(() => this.render());
+		hexellsAnimation = requestAnimationFrame(() => this.render());
 	}
 
 	startGestue(pos) {
@@ -195,7 +200,11 @@ class Hexells {
 
 		twgl.bindFramebufferInfo(this.gl);
 		this.ca.draw(this.getViewSize(), "color");
-		requestAnimationFrame(() => this.render());
+		hexellsAnimation = requestAnimationFrame(() => this.render());
+	}
+
+	destroy() {
+		cancelAnimationFrame(hexellsAnimation);
 	}
 }
 
