@@ -24,6 +24,11 @@ const vs_code = `
 	}
 `;
 
+/**
+ * Define an input.
+ * @param {String} name The name of the input
+ * @returns {String} The input definition
+ */
 const defInput = (name) => `
 	uniform Tensor ${name};
 	uniform sampler2D ${name}_tex;
@@ -461,6 +466,12 @@ const PROGRAMS = {
 	`
 };
 
+/**
+ * Create a program info object for each program.
+ * @param {WebGLRenderingContext} gl
+ * @param {String} [defines=""] The shader defines to use for all programs.
+ * @returns {Object.<String, twgl.ProgramInfo>}
+ */
 function createPrograms(gl, defines = "") {
 	const res = {};
 	for (const name in PROGRAMS) {
@@ -473,6 +484,26 @@ function createPrograms(gl, defines = "") {
 	return res;
 }
 
+/**
+ * Creates a tensor.
+ * @param {WebGLRenderingContext} gl
+ * @param {Number} w
+ * @param {Number} h
+ * @param {Number} depth
+ * @param {Boolean} packScaleZero
+ * @returns {{
+ * 	_type: String,
+ * 	fbi: twgl.FramebufferInfo,
+ * 	w: Number,
+ * 	h: Number,
+ * 	depth: Number,
+ * 	gridW: Number,
+ * 	gridH: Number,
+ * 	depth4: Number,
+ * 	tex: WebGLTexture,
+ * 	packScaleZero: Boolean
+ * }}
+ */
 function createTensor(gl, w, h, depth, packScaleZero) {
 	const depth4 = Math.ceil(depth / 4);
 	const gridW = Math.ceil(Math.sqrt(depth4));
@@ -488,6 +519,12 @@ function createTensor(gl, w, h, depth, packScaleZero) {
 	};
 }
 
+/**
+ * Set the uniforms for the given tensor.
+ * @param {Object} uniforms The uniforms to set.
+ * @param {string} name The name of the tensor.
+ * @param {Tensor} tensor The tensor to set the uniforms for.
+ */
 function setTensorUniforms(uniforms, name, tensor) {
 	uniforms[name + ".size"] = [tensor.w, tensor.h];
 	uniforms[name + ".gridSize"] = [tensor.gridW, tensor.gridH];
@@ -499,6 +536,11 @@ function setTensorUniforms(uniforms, name, tensor) {
 	}
 }
 
+/**
+ * Decodes a base64 string into a Uint8Array.
+ * @param {String} b64 A base64 encoded string
+ * @returns {Uint8Array} A Uint8Array containing the decoded data
+ */
 function decodeBase64(b64) {
 	const bin = atob(b64);
 	const bytes = new Uint8Array(bin.length);
@@ -509,6 +551,13 @@ function decodeBase64(b64) {
 	return bytes;
 }
 
+/**
+ * Create dense info.
+ * @param {WebGLRenderingContext} gl WebGL context
+ * @param {Object} params Dense info parameters
+ * @param {Function} onready Onready callback
+ * @returns {Object} Dense info
+ */
 function createDenseInfo(gl, params, onready) {
 	const coefs = [params.scale, 127.0 / 255.0];
 	const [in_n, out_n] = params.shape;
@@ -545,28 +594,28 @@ function createDenseInfo(gl, params, onready) {
 	return info;
 }
 
-/**
- * Usage:
- * ```
- * const gui = new dat.GUI();
- * const ca = new CA(gl, models, [W, H], gui);
- * ca.step();
- *
- * ca.paint(x, y, radius, modelIndex);
- * ca.clearCircle(x, y, radius;
- *
- * const stats = ca.benchmark();
- * ca.draw();
- * ca.draw(zoom);
- * ```
- *
- * @param {WebGLRenderingContext} gl
- * @param {Object} models
- * @param {Array} gridSize [W, H]
- * @param {dat.GUI} gui
- * @param {Function} [onready=()=>{}]
-*/
 class CA {
+	/**
+	 * Usage:
+	 * ```
+	 * const gui = new dat.GUI();
+	 * const ca = new CA(gl, models, [W, H], gui);
+	 * ca.step();
+	 *
+	 * ca.paint(x, y, radius, modelIndex);
+	 * ca.clearCircle(x, y, radius;
+	 *
+	 * const stats = ca.benchmark();
+	 * ca.draw();
+	 * ca.draw(zoom);
+	 * ```
+	 *
+	 * @param {WebGLRenderingContext} gl
+	 * @param {Object} models
+	 * @param {Array} gridSize [W, H]
+	 * @param {dat.GUI} gui
+	 * @param {Function} [onready=()=>{}]
+	 */
 	constructor(gl, models, gridSize, gui, onready) {
 		this.onready = onready || (() => {});
 		this.gl = gl;
@@ -620,6 +669,13 @@ class CA {
 		});
 	}
 
+	/**
+	 * Disturbs the circles on the canvas.
+	 * @param {Number} x The x coordinate of the center of the circle
+	 * @param {Number} y The y coordinate of the center of the circle
+	 * @param {Number} r The radius of the circle
+	 * @param {Array} viewSize [width, height]
+	 */
 	disturbCircle(x, y, r, viewSize = [128, 128]) {
 		this.runLayer(this.progs.align, this.buf.align, {
 			u_input: this.buf.newAlign,
@@ -694,6 +750,10 @@ class CA {
 		}
 	}
 
+	/**
+	 * Will be called every frame to update the state of the simulation.
+	 * @param {String} [stage="all"]
+	 */
 	step(stage = "all") {
 		if (!this.layers.every((l) => l.ready)) return;
 
@@ -815,6 +875,15 @@ class CA {
 		});
 	}
 
+	/**
+	 * Takes a position (x, y) and a viewSize (which is the size of the area to
+	 * be peeked into) and uses a shader to "peek" at the sonic data at that
+	 * position. It then reads that data into the `sonicBuf` array.
+	 * @param {Number} x X coordinate to peek at
+	 * @param {Number} y Y coordinate to peek at
+	 * @param {Number[]} viewSize [width, height]
+	 * @returns {{ buf: Uint8Array, tex: WebGLTexture, pos: Number[] }}
+	 */
 	peek(x, y, viewSize) {
 		this.runLayer(this.progs.peek, this.buf.sonic, {
 			u_pos: [x, y],
@@ -830,6 +899,13 @@ class CA {
 		return { buf: this.sonicBuf, tex: this.buf.sonic.tex, pos: [x, y] };
 	}
 
+	/**
+	 * Clear a circle.
+	 * @param {Number} x X coordinate of the center of the circle
+	 * @param {Number} y Y coordinate of the center of the circle
+	 * @param {Number} r Radius of the circle
+	 * @param {Array} [viewSize=[128, 128]] [width, height]
+	 */
 	clearCircle(x, y, r, viewSize = [128, 128]) {
 		this.runLayer(this.progs.paint, this.buf.state, {
 			u_pos: [x, y],
@@ -839,6 +915,10 @@ class CA {
 		});
 	}
 
+	/**
+	 * Sets the weights of the model.
+	 * @param {Object} models
+	 */
 	setWeights(models) {
 		const gl = this.gl;
 		this.layers.forEach((layer) => gl.deleteTexture(layer));
@@ -850,6 +930,13 @@ class CA {
 		this.layers = models.layers.map((layer) => createDenseInfo(gl, layer, onready));
 	}
 
+	/**
+	 * Runs a layer that has been compiled.
+	 * @param {Program} program The program to be run
+	 * @param {Tensor} output The output tensor
+	 * @param {Object} inputs The inputs to the program
+	 * @returns {Object} The result of the program
+	 */
 	runLayer(program, output, inputs = {}) {
 		const gl = this.gl;
 		const uniforms = {};
@@ -875,6 +962,13 @@ class CA {
 		return { programName: program.name, output };
 	}
 
+	/**
+	 * Run a dense layer.
+	 * @param {WebGLTexture} output The output texture
+	 * @param {WebGLTexture} input The input texture
+	 * @param {Layer} layer The layer to run
+	 * @returns {WebGLTexture} The output texture
+	 */
 	runDense(output, input, layer) {
 		return this.runLayer(this.progs.dense, output, {
 			u_input: input,
@@ -887,6 +981,11 @@ class CA {
 		});
 	}
 
+	/**
+	 * Draw the visualization.
+	 * @param {Object} viewSize
+	 * @param {String} visMode
+	 */
 	draw(viewSize, visMode) {
 		visMode = visMode || this.visMode;
 		const gl = this.gl;
