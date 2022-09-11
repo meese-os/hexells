@@ -25,6 +25,11 @@ const vs_code = `
 	}
 `;
 
+/**
+ * Define an input.
+ * @param {String} name The name of the input
+ * @returns {String} The input definition
+ */
 const defInput = (name) => `
 	uniform Tensor ${name};
 	uniform sampler2D ${name}_tex;
@@ -462,6 +467,12 @@ const PROGRAMS = {
 	`
 };
 
+/**
+ * Create a program info object for each program.
+ * @param {WebGLRenderingContext} gl
+ * @param {String} [defines=""] The shader defines to use for all programs.
+ * @returns {Object.<String, twgl.ProgramInfo>}
+ */
 function createPrograms(gl, defines = "") {
 	const res = {};
 	for (const name in PROGRAMS) {
@@ -474,6 +485,26 @@ function createPrograms(gl, defines = "") {
 	return res;
 }
 
+/**
+ * Creates a tensor.
+ * @param {WebGLRenderingContext} gl
+ * @param {Number} w
+ * @param {Number} h
+ * @param {Number} depth
+ * @param {Boolean} packScaleZero
+ * @returns {{
+ * 	_type: String,
+ * 	fbi: twgl.FramebufferInfo,
+ * 	w: Number,
+ * 	h: Number,
+ * 	depth: Number,
+ * 	gridW: Number,
+ * 	gridH: Number,
+ * 	depth4: Number,
+ * 	tex: WebGLTexture,
+ * 	packScaleZero: Boolean
+ * }}
+ */
 function createTensor(gl, w, h, depth, packScaleZero) {
 	const depth4 = Math.ceil(depth / 4);
 	const gridW = Math.ceil(Math.sqrt(depth4));
@@ -489,6 +520,12 @@ function createTensor(gl, w, h, depth, packScaleZero) {
 	};
 }
 
+/**
+ * Set the uniforms for the given tensor.
+ * @param {Object} uniforms The uniforms to set.
+ * @param {string} name The name of the tensor.
+ * @param {Tensor} tensor The tensor to set the uniforms for.
+ */
 function setTensorUniforms(uniforms, name, tensor) {
 	uniforms[name + ".size"] = [tensor.w, tensor.h];
 	uniforms[name + ".gridSize"] = [tensor.gridW, tensor.gridH];
@@ -500,6 +537,11 @@ function setTensorUniforms(uniforms, name, tensor) {
 	}
 }
 
+/**
+ * Decodes a base64 string into a Uint8Array.
+ * @param {String} b64 A base64 encoded string
+ * @returns {Uint8Array} A Uint8Array containing the decoded data
+ */
 function decodeBase64(b64) {
 	const bin = atob(b64);
 	const bytes = new Uint8Array(bin.length);
@@ -510,6 +552,13 @@ function decodeBase64(b64) {
 	return bytes;
 }
 
+/**
+ * Create dense info.
+ * @param {WebGLRenderingContext} gl WebGL context
+ * @param {Object} params Dense info parameters
+ * @param {Function} onready Onready callback
+ * @returns {Object} Dense info
+ */
 function createDenseInfo(gl, params, onready) {
 	const coefs = [params.scale, 127.0 / 255.0];
 	const [in_n, out_n] = params.shape;
@@ -546,28 +595,28 @@ function createDenseInfo(gl, params, onready) {
 	return info;
 }
 
-/**
- * Usage:
- * ```
- * const gui = new dat.GUI();
- * const ca = new CA(gl, models, [W, H], gui);
- * ca.step();
- *
- * ca.paint(x, y, radius, modelIndex);
- * ca.clearCircle(x, y, radius;
- *
- * const stats = ca.benchmark();
- * ca.draw();
- * ca.draw(zoom);
- * ```
- *
- * @param {WebGLRenderingContext} gl
- * @param {Object} models
- * @param {Array} gridSize [W, H]
- * @param {dat.GUI} gui
- * @param {Function} [onready=()=>{}]
-*/
 class CA {
+	/**
+	 * Usage:
+	 * ```
+	 * const gui = new dat.GUI();
+	 * const ca = new CA(gl, models, [W, H], gui);
+	 * ca.step();
+	 *
+	 * ca.paint(x, y, radius, modelIndex);
+	 * ca.clearCircle(x, y, radius;
+	 *
+	 * const stats = ca.benchmark();
+	 * ca.draw();
+	 * ca.draw(zoom);
+	 * ```
+	 *
+	 * @param {WebGLRenderingContext} gl
+	 * @param {Object} models
+	 * @param {Array} gridSize [W, H]
+	 * @param {dat.GUI} gui
+	 * @param {Function} [onready=()=>{}]
+	 */
 	constructor(gl, models, gridSize, gui, onready) {
 		this.onready = onready || (() => {});
 		this.gl = gl;
@@ -621,6 +670,13 @@ class CA {
 		});
 	}
 
+	/**
+	 * Disturbs the circles on the canvas.
+	 * @param {Number} x The x coordinate of the center of the circle
+	 * @param {Number} y The y coordinate of the center of the circle
+	 * @param {Number} r The radius of the circle
+	 * @param {Array} viewSize [width, height]
+	 */
 	disturbCircle(x, y, r, viewSize = [128, 128]) {
 		this.runLayer(this.progs.align, this.buf.align, {
 			u_input: this.buf.newAlign,
@@ -695,6 +751,10 @@ class CA {
 		}
 	}
 
+	/**
+	 * Will be called every frame to update the state of the simulation.
+	 * @param {String} [stage="all"]
+	 */
 	step(stage = "all") {
 		if (!this.layers.every((l) => l.ready)) return;
 
@@ -816,6 +876,15 @@ class CA {
 		});
 	}
 
+	/**
+	 * Takes a position (x, y) and a viewSize (which is the size of the area to
+	 * be peeked into) and uses a shader to "peek" at the sonic data at that
+	 * position. It then reads that data into the `sonicBuf` array.
+	 * @param {Number} x X coordinate to peek at
+	 * @param {Number} y Y coordinate to peek at
+	 * @param {Number[]} viewSize [width, height]
+	 * @returns {{ buf: Uint8Array, tex: WebGLTexture, pos: Number[] }}
+	 */
 	peek(x, y, viewSize) {
 		this.runLayer(this.progs.peek, this.buf.sonic, {
 			u_pos: [x, y],
@@ -831,6 +900,13 @@ class CA {
 		return { buf: this.sonicBuf, tex: this.buf.sonic.tex, pos: [x, y] };
 	}
 
+	/**
+	 * Clear a circle.
+	 * @param {Number} x X coordinate of the center of the circle
+	 * @param {Number} y Y coordinate of the center of the circle
+	 * @param {Number} r Radius of the circle
+	 * @param {Array} [viewSize=[128, 128]] [width, height]
+	 */
 	clearCircle(x, y, r, viewSize = [128, 128]) {
 		this.runLayer(this.progs.paint, this.buf.state, {
 			u_pos: [x, y],
@@ -840,6 +916,10 @@ class CA {
 		});
 	}
 
+	/**
+	 * Sets the weights of the model.
+	 * @param {Object} models
+	 */
 	setWeights(models) {
 		const gl = this.gl;
 		this.layers.forEach((layer) => gl.deleteTexture(layer));
@@ -851,6 +931,13 @@ class CA {
 		this.layers = models.layers.map((layer) => createDenseInfo(gl, layer, onready));
 	}
 
+	/**
+	 * Runs a layer that has been compiled.
+	 * @param {Program} program The program to be run
+	 * @param {Tensor} output The output tensor
+	 * @param {Object} inputs The inputs to the program
+	 * @returns {Object} The result of the program
+	 */
 	runLayer(program, output, inputs = {}) {
 		const gl = this.gl;
 		const uniforms = {};
@@ -876,6 +963,13 @@ class CA {
 		return { programName: program.name, output };
 	}
 
+	/**
+	 * Run a dense layer.
+	 * @param {WebGLTexture} output The output texture
+	 * @param {WebGLTexture} input The input texture
+	 * @param {Layer} layer The layer to run
+	 * @returns {WebGLTexture} The output texture
+	 */
 	runDense(output, input, layer) {
 		return this.runLayer(this.progs.dense, output, {
 			u_input: input,
@@ -888,6 +982,11 @@ class CA {
 		});
 	}
 
+	/**
+	 * Draw the visualization.
+	 * @param {Object} viewSize
+	 * @param {String} visMode
+	 */
 	draw(viewSize, visMode) {
 		visMode = visMode || this.visMode;
 		const gl = this.gl;
@@ -933,23 +1032,36 @@ const twgl = require("twgl.js");
  * @property {Boolean} responsive
  */
 
+/**
+ * Used to cancel the Hexells animation loop when desired.
+ */
+let hexellsAnimation;
+
 class Hexells {
 	/**
 	 * Creates a Hexells instance.
 	 * @param {HTMLCanvasElement} canvas
 	 * @param {HexellsOptions} options
 	 */
-  constructor(canvas, options = {}) {
-    this.canvas = canvas;
+	constructor(canvas, options = {}) {
+		this.canvas = canvas;
 		this.options = options;
-    this.gl = canvas.getContext("webgl", {
-      alpha: false,
-      desynchronized: true,
-      powerPreference: "high-performance"
-    });
+		this.gl = canvas.getContext("webgl", {
+			alpha: false,
+			desynchronized: true,
+			powerPreference: "high-performance"
+		});
 
-    this.brushRadius = options.brushRadius ?? 16;
-    this.stepPerFrame = options.stepPerFrame ?? 1;
+		if (!this.gl) {
+			if (window && !Boolean(window.WebGLRenderingContext)) {
+				throw new Error("WebGL is not supported by your browser.");
+			} else {
+				throw new Error("There was an error initializing WebGL. Does your canvas already have a context?");
+			}
+		}
+
+		this.brushRadius = options.brushRadius ?? 16;
+		this.stepPerFrame = options.stepPerFrame ?? 1;
 		this.timePerModel = options.timePerModel ?? 20 * 1000;
 		this.responsive = options.responsive ?? false;
 
@@ -967,18 +1079,19 @@ class Hexells {
 		this.ca = new CA(this.gl, models, [160, 160], gui, () =>
 			this.setup(models)
 		);
-  }
+	}
 
-  setup(models) {
-    this.shuffledModelIds = models.model_names
-      .map((_, i) => [Math.random(), i])
-      .sort()
-      .map((p) => p[1]);
-    this.curModelIndex = this.shuffledModelIds[0];
-    this.modelId = this.shuffledModelIds[this.curModelIndex];
-    this.ca.paint(0, 0, -1, this.modelId);
+	setup(models) {
+		this.canvas.classList.add("hexells");
+		this.shuffledModelIds = models.model_names
+			.map((_, i) => [Math.random(), i])
+			.sort()
+			.map((p) => p[1]);
+		this.curModelIndex = this.shuffledModelIds[0];
+		this.modelId = this.shuffledModelIds[this.curModelIndex];
+		this.ca.paint(0, 0, -1, this.modelId);
 
-    this.guesture = null;
+		this.guesture = null;
 
 		if (this.responsive) {
 			const mouseEvent = (f) => (e) => {
@@ -1030,86 +1143,90 @@ class Hexells {
 			setInterval(() => this.switchModel(1), this.timePerModel);
 		}
 
-    requestAnimationFrame(() => this.render());
-  }
+		hexellsAnimation = requestAnimationFrame(() => this.render());
+	}
 
-  startGestue(pos) {
-    this.gesture = {
-      d: 0,
-      l: 0,
-      prevPos: pos,
-      r: 0,
-      time: Date.now(),
-      u: 0,
-    };
-  }
+	startGestue(pos) {
+		this.gesture = {
+			d: 0,
+			l: 0,
+			prevPos: pos,
+			r: 0,
+			time: Date.now(),
+			u: 0,
+		};
+	}
 
-  touch(xy) {
-    const [x, y] = xy;
-    const g = this.gesture;
-    if (g) {
-      const [x0, y0] = g.prevPos;
-      g.l += Math.max(x0 - x, 0);
-      g.r += Math.max(x - x0, 0);
-      g.u += Math.max(y0 - y, 0);
-      g.d += Math.max(y - y0, 0);
-      g.prevPos = xy;
-    }
+	touch(xy) {
+		const [x, y] = xy;
+		const g = this.gesture;
+		if (g) {
+			const [x0, y0] = g.prevPos;
+			g.l += Math.max(x0 - x, 0);
+			g.r += Math.max(x - x0, 0);
+			g.u += Math.max(y0 - y, 0);
+			g.d += Math.max(y - y0, 0);
+			g.prevPos = xy;
+		}
 
-    const viewSize = this.getViewSize();
-    this.ca.clearCircle(x, y, this.brushRadius, viewSize);
-  }
+		const viewSize = this.getViewSize();
+		this.ca.clearCircle(x, y, this.brushRadius, viewSize);
+	}
 
-  endGestue() {
-    if (!this.gesture) return;
+	endGestue() {
+		if (!this.gesture) return;
 
-    if (Date.now() - this.gesture.time < 1000) {
-      const { l, r, u, d } = this.gesture;
-      if (l > 200 && Math.max(r, u, d) < l * 0.25) {
-        this.switchModel(-1);
-      } else if (r > 200 && Math.max(l, u, d) < r * 0.25) {
-        this.switchModel(1);
-      }
-    }
+		if (Date.now() - this.gesture.time < 1000) {
+			const { l, r, u, d } = this.gesture;
+			if (l > 200 && Math.max(r, u, d) < l * 0.25) {
+				this.switchModel(-1);
+			} else if (r > 200 && Math.max(l, u, d) < r * 0.25) {
+				this.switchModel(1);
+			}
+		}
 
-    this.gesture = null;
-  }
+		this.gesture = null;
+	}
 
-  switchModel(swipe) {
-    const n = this.shuffledModelIds.length;
-    this.curModelIndex = (this.curModelIndex + n + swipe) % n;
-    const id = this.shuffledModelIds[this.curModelIndex];
-    this.setModel(id);
-  }
+	switchModel(swipe) {
+		const n = this.shuffledModelIds.length;
+		this.curModelIndex = (this.curModelIndex + n + swipe) % n;
+		const id = this.shuffledModelIds[this.curModelIndex];
+		this.setModel(id);
+	}
 
-  setModel(id) {
-    this.modelId = id;
-    this.ca.paint(0, 0, -1, id);
-    this.ca.disturb();
-  }
+	setModel(id) {
+		this.modelId = id;
+		this.ca.paint(0, 0, -1, id);
+		this.ca.disturb();
+	}
 
-  getViewSize() {
-    return [
-      this.canvas.clientWidth || this.canvas.width,
-      this.canvas.clientHeight || this.canvas.height
-    ];
-  }
+	getViewSize() {
+		return [
+			this.canvas.clientWidth || this.canvas.width,
+			this.canvas.clientHeight || this.canvas.height
+		];
+	}
 
-  render() {
-    for (let i = 0; i < this.stepPerFrame; ++i) {
-      this.ca.step();
-    }
+	render() {
+		for (let i = 0; i < this.stepPerFrame; ++i) {
+			this.ca.step();
+		}
 
-    const { canvas } = this;
-    const dpr = window.devicePixelRatio || 1;
-    const [w, h] = this.getViewSize();
-    canvas.width = Math.round(w * dpr);
-    canvas.height = Math.round(h * dpr);
+		const { canvas } = this;
+		const dpr = window.devicePixelRatio || 1;
+		const [w, h] = this.getViewSize();
+		canvas.width = Math.round(w * dpr);
+		canvas.height = Math.round(h * dpr);
 
-    twgl.bindFramebufferInfo(this.gl);
-    this.ca.draw(this.getViewSize(), "color");
-    requestAnimationFrame(() => this.render());
-  }
+		twgl.bindFramebufferInfo(this.gl);
+		this.ca.draw(this.getViewSize(), "color");
+		hexellsAnimation = requestAnimationFrame(() => this.render());
+	}
+
+	destroy() {
+		cancelAnimationFrame(hexellsAnimation);
+	}
 }
 
 // For use in npm and the browser
