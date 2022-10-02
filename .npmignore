@@ -1,3 +1,5 @@
 node_modules
 browserify
 index.html
+.github/
+.editorconfig
