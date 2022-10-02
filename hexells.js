@@ -32,7 +32,7 @@ class Hexells {
 	/**
 	 * Creates a Hexells instance.
 	 * @param {HTMLCanvasElement} canvas
-	 * @param {HexellsOptions} options
+	 * @param {HexellsOptions} [options={}]
 	 */
 	constructor(canvas, options = {}) {
 		const powerPreference = options.powerPreference || "default";
@@ -78,6 +78,10 @@ class Hexells {
 		);
 	}
 
+	/**
+	 * Sets up the Hexells instance.
+	 * @param {Object} models
+	 */
 	setup(models) {
 		this.canvas.classList.add("hexells");
 		this.shuffledModelIds = models.model_names
@@ -87,51 +91,51 @@ class Hexells {
 		this.curModelIndex = this.shuffledModelIds[0];
 		this.modelId = this.shuffledModelIds[this.curModelIndex];
 		this.ca.paint(0, 0, -1, this.modelId);
-
 		this.guesture = null;
 
 		if (this.responsive) {
-			const mouseEvent = (f) => (e) => {
-				e.preventDefault();
-				f([e.offsetX, e.offsetY], e);
+			const mouseEvent = (cb) => (event) => {
+				event.preventDefault();
+				cb([event.offsetX, event.offsetY], event);
 			};
 
-			const touchEvent = (f) => (e) => {
-				e.preventDefault();
+			const touchEvent = (cb) => (event) => {
+				event.preventDefault();
 				const rect = canvas.getBoundingClientRect();
-				for (const t of e.touches) {
-					const xy = [t.clientX - rect.left, t.clientY - rect.top];
-					f(xy, e);
+				for (const touch of event.touches) {
+					const pos = [touch.clientX - rect.left, touch.clientY - rect.top];
+					cb(pos, event);
 				}
 			}
 
-			canvas.addEventListener("mousedown", mouseEvent((xy, e) => {
+			canvas.addEventListener("mousedown", mouseEvent((pos, e) => {
 				if (e.buttons == 1) {
-					this.startGestue(xy);
-					this.touch(xy);
+					this.startGestue(pos);
+					this.touch(pos);
 				}
 			}));
-			canvas.addEventListener("mousemove", mouseEvent((xy, e) => {
+			canvas.addEventListener("mousemove", mouseEvent((pos, e) => {
 				if (e.buttons == 1) {
-					this.touch(xy);
+					this.touch(pos);
 				}
 			}));
 			canvas.addEventListener("mouseup", mouseEvent(
-				(xy) => this.endGestue(xy))
+				(pos) => this.endGestue(pos))
 			);
-			canvas.addEventListener("touchstart", touchEvent((xy, e) => {
+			canvas.addEventListener("touchstart", touchEvent((pos, e) => {
 				if (e.touches.length == 1) {
-					this.startGestue(xy);
+					this.startGestue(pos);
 				} else {
-					// cancel guesture
+					// Cancel guesture
 					this.gesture = null;
 				}
-				this.touch(xy);
+
+				this.touch(pos);
 			}));
 			canvas.addEventListener("touchmove", touchEvent(
-				(xy) => this.touch(xy))
+				(pos) => this.touch(pos))
 			);
-			canvas.addEventListener("touchend", (xy) => this.endGestue(xy));
+			canvas.addEventListener("touchend", (pos) => this.endGestue(pos));
 			document.addEventListener("keypress", (e) => {
 				if (e.key == "a") this.switchModel(1);
 				if (e.key == "z") this.switchModel(-1);
@@ -143,6 +147,10 @@ class Hexells {
 		hexellsAnimation = requestAnimationFrame(() => this.render());
 	}
 
+	/**
+	 * Starts a new guesture.
+	 * @param {Number[]} pos The position of the touch event
+	 */
 	startGestue(pos) {
 		this.gesture = {
 			d: 0,
@@ -154,8 +162,12 @@ class Hexells {
 		};
 	}
 
-	touch(xy) {
-		const [x, y] = xy;
+	/**
+	 * Handles a touch event and clears a circle of cells.
+	 * @param {Number[]} pos The position of the touch
+	 */
+	touch(pos) {
+		const [x, y] = pos;
 		const g = this.gesture;
 		if (g) {
 			const [x0, y0] = g.prevPos;
@@ -163,13 +175,16 @@ class Hexells {
 			g.r += Math.max(x - x0, 0);
 			g.u += Math.max(y0 - y, 0);
 			g.d += Math.max(y - y0, 0);
-			g.prevPos = xy;
+			g.prevPos = pos;
 		}
 
 		const viewSize = this.getViewSize();
 		this.ca.clearCircle(x, y, this.brushRadius, viewSize);
 	}
 
+	/**
+	 * Ends the current guesture.
+	 */
 	endGestue() {
 		if (!this.gesture) return;
 
@@ -185,19 +200,31 @@ class Hexells {
 		this.gesture = null;
 	}
 
+	/**
+	 * Switches to the next model.
+	 * @param {Number} swipe
+	 */
 	switchModel(swipe) {
-		const n = this.shuffledModelIds.length;
-		this.curModelIndex = (this.curModelIndex + n + swipe) % n;
+		const numModels = this.shuffledModelIds.length;
+		this.curModelIndex = (this.curModelIndex + numModels + swipe) % numModels;
 		const id = this.shuffledModelIds[this.curModelIndex];
 		this.setModel(id);
 	}
 
+	/**
+	 * Sets the current model.
+	 * @param {Number} id
+	 */
 	setModel(id) {
 		this.modelId = id;
 		this.ca.paint(0, 0, -1, id);
 		this.ca.disturb();
 	}
 
+	/**
+	 * Gets the size of the canvas.
+	 * @returns {Number[]} The size of the canvas in pixels
+	 */
 	getViewSize() {
 		return [
 			this.canvas.clientWidth || this.canvas.width,
@@ -205,6 +232,9 @@ class Hexells {
 		];
 	}
 
+	/**
+	 * Renders the current state of the cellular automaton.
+	 */
 	render() {
 		for (let i = 0; i < this.stepPerFrame; ++i) {
 			this.ca.step();
@@ -224,6 +254,9 @@ class Hexells {
 		}, this.fps);
 	}
 
+	/**
+	 * Destroys the cellular automaton, freeing up memory.
+	 */
 	destroy() {
 		cancelAnimationFrame(hexellsAnimation);
 		hexellsAnimation = null;
