@@ -1,4 +1,4 @@
-const CA = require("./ca.js");
+const CellularAutomata = require("./ca.js");
 const dat = require("dat.gui");
 const twgl = require("twgl.js");
 
@@ -73,7 +73,7 @@ class Hexells {
 		}
 
 		const models = require("./models.json");
-		this.ca = new CA(this.gl, models, [160, 160], gui, () =>
+		this.ca = new CellularAutomata(this.gl, models, [160, 160], gui, () =>
 			this.setup(models)
 		);
 	}
@@ -83,7 +83,9 @@ class Hexells {
 	 * @param {Object} models
 	 */
 	setup(models) {
-		this.canvas.classList.add("hexells");
+		const { canvas } = this;
+		canvas.classList.add("hexells");
+
 		this.shuffledModelIds = models.model_names
 			.map((_, i) => [Math.random(), i])
 			.sort()
@@ -260,6 +262,14 @@ class Hexells {
 	destroy() {
 		cancelAnimationFrame(hexellsAnimation);
 		hexellsAnimation = null;
+
+		let { ca, canvas } = this;
+		ca.destroy();
+		ca = null;
+		if (canvas) {
+			canvas.parentElement.removeChild(canvas);
+			canvas = null;
+		}
 	}
 }
 

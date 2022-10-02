@@ -15,6 +15,12 @@
 const twgl = require("twgl.js");
 const UPNG = require("upng-js");
 
+/**
+ * Keeps track of all timeouts so they can be cleared.
+ */
+let timeouts = [];
+let deleted = false;
+
 const vs_code = `
 	attribute vec4 position;
 	varying vec2 uv;
@@ -469,7 +475,7 @@ const PROGRAMS = {
 /**
  * Create a program info object for each program.
  * @param {WebGLRenderingContext} gl
- * @param {String} [defines=""] The shader defines to use for all programs.
+ * @param {String} [defines=""] The shader defines to use for all programs
  * @returns {Object.<String, twgl.ProgramInfo>}
  */
 function createPrograms(gl, defines = "") {
@@ -521,11 +527,12 @@ function createTensor(gl, w, h, depth, packScaleZero) {
 
 /**
  * Set the uniforms for the given tensor.
- * @param {Object} uniforms The uniforms to set.
- * @param {string} name The name of the tensor.
- * @param {Tensor} tensor The tensor to set the uniforms for.
+ * @param {Object} uniforms The uniforms to set
+ * @param {string} name The name of the tensor
+ * @param {Tensor} tensor The tensor to set the uniforms for
  */
 function setTensorUniforms(uniforms, name, tensor) {
+	if (deleted) return;
 	uniforms[name + ".size"] = [tensor.w, tensor.h];
 	uniforms[name + ".gridSize"] = [tensor.gridW, tensor.gridH];
 	uniforms[name + ".depth"] = tensor.depth;
@@ -570,8 +577,8 @@ function createDenseInfo(gl, params, onready) {
 		ready: false
 	};
 
-	// workaround against iOS WebKit bug (https://bugs.webkit.org/show_bug.cgi?id=138477)
-	// non-premultiplied PNG were decoded incorrectly
+	// Workaround against iOS WebKit bug (https://bugs.webkit.org/show_bug.cgi?id=138477),
+	// where non-premultiplied PNG were decoded incorrectly
 	const img = UPNG.decode(decodeBase64(params.data.split(",")[1]));
 	const data = new Uint8Array(UPNG.toRGBA8(img)[0]);
 	info.tex = twgl.createTexture(gl, {
@@ -581,25 +588,27 @@ function createDenseInfo(gl, params, onready) {
 		src: data,
 		// flipY: false,
 		// premultiplyAlpha: false,
-	}, ()=>{
+	}, () => {
 		// info.ready = true;
 		// onready();
 	});
 
-	setTimeout(()=>{
-		info.ready = true;
-		onready();
-	}, 0);
+	timeouts.push(
+		setTimeout(() => {
+			info.ready = true;
+			onready();
+		}, 0)
+	);
 
 	return info;
 }
 
-class CA {
+class CellularAutomata {
 	/**
 	 * Usage:
 	 * ```
 	 * const gui = new dat.GUI();
-	 * const ca = new CA(gl, models, [W, H], gui);
+	 * const ca = new CellularAutomata(gl, models, [W, H], gui);
 	 * ca.step();
 	 *
 	 * ca.paint(x, y, radius, modelIndex);
@@ -617,6 +626,7 @@ class CA {
 	 * @param {Function} [onready=()=>{}]
 	 */
 	constructor(gl, models, gridSize, gui, onready) {
+		deleted = false;
 		this.onready = onready || (() => {});
 		this.gl = gl;
 		this.gridSize = gridSize || [96, 96];
@@ -660,6 +670,9 @@ class CA {
 		this.disturb();
 	}
 
+	/**
+	 * Disturb the CellularAutomata.
+	 */
 	disturb() {
 		this.runLayer(this.progs.align, this.buf.align, {
 			u_input: this.buf.newAlign,
@@ -938,11 +951,12 @@ class CA {
 	 * @returns {Object} The result of the program
 	 */
 	runLayer(program, output, inputs = {}) {
+		if (deleted) return;
 		const gl = this.gl;
 		const uniforms = {};
 		for (const name in inputs) {
 			const val = inputs[name];
-			if (val._type == "tensor") {
+			if (val?._type === "tensor") {
 				setTensorUniforms(uniforms, name, val);
 			} else {
 				uniforms[name] = val;
@@ -987,6 +1001,7 @@ class CA {
 	 * @param {String} visMode
 	 */
 	draw(viewSize, visMode) {
+		if (deleted) return;
 		visMode = visMode || this.visMode;
 		const gl = this.gl;
 
@@ -1013,6 +1028,24 @@ class CA {
 		twgl.setUniforms(this.progs.vis, uniforms);
 		twgl.drawBufferInfo(gl, this.quad);
 	}
+
+	/**
+	 * Destroy the model.
+	 */
+	destroy() {
+		// https://stackoverflow.com/a/8860210/6456163
+		for (let i = 0; i < timeouts.length; i++) {
+			clearTimeout(timeouts[i]);
+		}
+
+		deleted = true;
+		const gl = this.gl;
+		this.layers.forEach((layer) => gl.deleteTexture(layer.tex));
+		this.layers = [];
+		this.buf = {};
+		this.progs = {};
+		this.quad = null;
+	}
 }
 
-module.exports = CA;
+module.exports = CellularAutomata;
