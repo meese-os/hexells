@@ -19,6 +19,10 @@ const UPNG = require("upng-js");
  * Keeps track of all timeouts so they can be cleared.
  */
 let timeouts = [];
+
+/**
+ * Whether or not the destroy function has been called yet.
+ */
 let deleted = false;
 
 const vs_code = `
@@ -62,11 +66,10 @@ const PREFIX = `
 	  p3 += dot(p3, p3.yzx + 33.33);
 	  return fract((p3.x + p3.y) * p3.z);
 	}
-	vec2 hash23(vec3 p3)
-	{
+	vec2 hash23(vec3 p3) {
 		p3 = fract(p3 * vec3(.1031, .1030, .0973));
 		p3 += dot(p3, p3.yzx+33.33);
-		return fract((p3.xx+p3.yz)*p3.zy);
+		return fract((p3.xx + p3.yz) * p3.zy);
 	}
 
 	struct Tensor {
@@ -80,7 +83,7 @@ const PREFIX = `
 	vec4 _readUV(Tensor tensor, sampler2D tex, vec2 uv) {
 		vec4 v = texture2D(tex, uv);
 		vec2 p = tensor.packScaleZero;
-		v = (v-p.y)*p.x;
+		v = (v - p.y) * p.x;
 		return v;
 	}
 	vec2 _getUV(Tensor tensor, vec2 pos, float ch) {
@@ -102,13 +105,13 @@ const PREFIX = `
 		return mod(gl_FragCoord.xy, u_output.size);
 	}
 	float getOutputChannel() {
-		vec2 xy = floor(gl_FragCoord.xy/u_output.size);
-		return xy.y*u_output.gridSize.x+xy.x;
+		vec2 xy = floor(gl_FragCoord.xy / u_output.size);
+		return xy.y * u_output.gridSize.x + xy.x;
 	}
 
 	void setOutput(vec4 v) {
 		vec2 p = u_output.packScaleZero;
-		v = v/p.x + p.y;
+		v = v / p.x + p.y;
 		gl_FragColor = v;
 	}
 
@@ -138,9 +141,9 @@ const PREFIX = `
 
 	vec4 conv3x3(vec2 xy, float inputCh, mat3 filter) {
 		vec4 a = vec4(0.0);
-		for (int y=0; y<3; ++y)
-		for (int x=0; x<3; ++x) {
-		  vec2 p = xy+vec2(float(x-1), float(y-1));
+		for (int y = 0; y < 3; ++y)
+		for (int x = 0; x < 3; ++x) {
+		  vec2 p = xy + vec2(float(x-1), float(y-1));
 		  a += filter[y][x] * u_input_read(p, inputCh);
 		}
 		return a;
@@ -151,21 +154,21 @@ const PREFIX = `
 	// returns xy - in cell pos, zw - skewed cell id
 	vec4 getHex(vec2 u) {
 		vec2 s = vec2(1., mix(2.0, 1.732, u_hexGrid));
-		vec2 p = vec2(0.5*u_hexGrid, 0.5);
+		vec2 p = vec2(0.5 * u_hexGrid, 0.5);
 		vec2 a = mod(u    ,s)*2.-s;
 		vec2 b = mod(u+s*p,s)*2.-s;
 		vec2 ai = floor(u/s);
 		vec2 bi = floor(u/s+p);
 		// skewed coords
-		ai = vec2(ai.x-ai.y*u_hexGrid, ai.y*2.0+1.0);
-		bi = vec2(bi.x-bi.y*u_hexGrid, bi.y*2.0);
-		return dot(a,a)<dot(b,b) ? vec4(a, ai) : vec4(b, bi);
+		ai = vec2(ai.x - ai.y * u_hexGrid, ai.y * 2.0 + 1.0);
+		bi = vec2(bi.x - bi.y * u_hexGrid, bi.y * 2.0);
+		return dot(a,a) < dot(b,b) ? vec4(a, ai) : vec4(b, bi);
 	}
 
 	float hex(in vec2 p){
 		vec2 s = vec2(1., 1.732);
 		p = abs(p);
-		return max(dot(p, s*.5), p.x); // Hexagon.
+		return max(dot(p, s * .5), p.x); // Hexagon.
 	}
 
 	// https://www.shadertoy.com/view/XtXcWs
@@ -189,11 +192,11 @@ const PREFIX = `
 		xy /= u_viewSize;
 		xy.y = 1.0-xy.y;
 		vec2 normViewSize = u_viewSize/length(u_viewSize);
-		xy = (xy*0.85+0.25) * normViewSize;
+		xy = (xy * 0.85 + 0.25) * normViewSize;
 
 		Hexel h;
 		float nxy = length(xy);
-		h.zoom = 4.0/(nxy*nxy);
+		h.zoom = 4.0 / (nxy * nxy);
 		xy = cmul(xy, xy);
 		xy = cmul(xy, xy);
 		xy *= 160.0;
@@ -206,8 +209,8 @@ const PREFIX = `
 	float calcMouseDist(vec2 mousePosScr) {
 		Hexel h = screen2hex(mousePosScr);
 		h.cellXY = mod(h.cellXY, u_output.size);
-		vec2 diff = abs(getOutputXY()-h.cellXY-0.5);
-		return length(min(diff, u_output.size-diff))*h.zoom;
+		vec2 diff = abs(getOutputXY() - h.cellXY - 0.5);
+		return length(min(diff, u_output.size-diff)) * h.zoom;
 	}
 `;
 
@@ -317,12 +320,12 @@ const PROGRAMS = {
 				return;
 
 			float dy = 1.0 / (u_input.depth + 1.0) / u_layout.y;
-			vec2 p = vec2((ch + 0.5) / u_output.depth4, dy*0.5);
+			vec2 p = vec2((ch + 0.5) / u_output.depth4, dy * 0.5);
 			vec2 fuzz = (hash23(vec3(xy, u_seed + ch)) - 0.5) * u_fuzz;
 
 			vec2 realXY = xy;
 			#ifdef SPARSE_UPDATE
-			realXY = texture2D(u_shuffleTex, xy / u_output.size).xy*255.0 + 0.5 + u_shuffleOfs;
+			realXY = texture2D(u_shuffleTex, xy / u_output.size).xy * 255.0 + 0.5 + u_shuffleOfs;
 			#endif
 			float modelIdx = u_control_read(realXY + fuzz, 0.0).x + 0.5;
 			p.x += floor(mod(modelIdx, u_layout.x));
@@ -399,12 +402,12 @@ const PROGRAMS = {
 
 		float sdTriangleIsosceles(in vec2 p, in vec2 q) {
 			p.x = abs(p.x);
-			vec2 a = p - q*clamp( dot(p,q)/dot(q,q), 0.0, 1.0 );
-			vec2 b = p - q*vec2( clamp( p.x/q.x, 0.0, 1.0 ), 1.0 );
-			float s = -sign( q.y );
-			vec2 d = min( vec2( dot(a,a), s*(p.x*q.y-p.y*q.x) ),
-							vec2( dot(b,b), s*(p.y-q.y)  ));
-			return -sqrt(d.x)*sign(d.y);
+			vec2 a = p - q * clamp(dot(p,q) / dot(q,q), 0.0, 1.0);
+			vec2 b = p - q * vec2(clamp(p.x / q.x, 0.0, 1.0), 1.0);
+			float s = -sign(q.y);
+			vec2 d = min(vec2(dot(a,a), s * (p.x * q.y - p.y * q.x)),
+							 vec2(dot(b,b), s * (p.y - q.y)));
+			return -sqrt(d.x) * sign(d.y);
 		}
 
 		float aastep(float v) {
@@ -418,7 +421,7 @@ const PROGRAMS = {
 
 		void spot(vec2 pos, float v, vec2 xy, inout vec3 rgb) {
 			v = sqrt(abs(v)) * sign(v);
-			pos *= v*0.6;
+			pos *= v * 0.6;
 			float r = abs(v) * 0.30;
 			rgb += clip01((r - length(xy - pos)) / r) * 0.2;
 		}
@@ -429,7 +432,7 @@ const PROGRAMS = {
 		}
 
 		void main() {
-			vec2 xy = vec2(uv.x, 1.0-uv.y);
+			vec2 xy = vec2(uv.x, 1.0 - uv.y);
 			if (u_raw > 0.5) {
 				gl_FragColor = texture2D(u_input_tex, xy);
 				gl_FragColor.a = 1.0;
@@ -532,7 +535,8 @@ function createTensor(gl, w, h, depth, packScaleZero) {
  * @param {Tensor} tensor The tensor to set the uniforms for
  */
 function setTensorUniforms(uniforms, name, tensor) {
-	if (deleted) return;
+	if (deleted || !tensor) return;
+
 	uniforms[name + ".size"] = [tensor.w, tensor.h];
 	uniforms[name + ".gridSize"] = [tensor.gridW, tensor.gridH];
 	uniforms[name + ".depth"] = tensor.depth;

@@ -1,7 +1,7 @@
 {
   "name": "hexells",
-  "version": "1.2.0",
-  "description": "Create a canvas of a Self-Organising System of cells.",
+  "version": "1.2.1",
+  "description": "Create a canvas with a Self-Organising System of cells.",
   "main": "hexells.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -29,7 +29,7 @@
   },
   "dependencies": {
     "dat.gui": "^0.7.9",
-    "twgl.js": "^4.24.0",
+    "twgl.js": "^5.5.3",
     "upng-js": "^2.1.0"
   }
 }

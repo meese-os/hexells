@@ -133,7 +133,7 @@ class Hexells {
 				}
 
 				this.touch(pos);
-			}));
+			}), { passive: false });
 			canvas.addEventListener("touchmove", touchEvent(
 				(pos) => this.touch(pos))
 			);
