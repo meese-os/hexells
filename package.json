@@ -29,7 +29,7 @@
   },
   "dependencies": {
     "dat.gui": "^0.7.9",
-    "twgl.js": "^5.5.3",
+    "twgl.js": "^5.5.4",
     "upng-js": "^2.1.0"
   }
 }
